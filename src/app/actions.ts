@@ -74,7 +74,7 @@ export async function getDocsStatusAction(
     async start(controller) {
       const encoder = new TextEncoder();
       try {
-        for await (const chunk of flow) {
+        for await (const chunk of flow.stream()) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
         }
 

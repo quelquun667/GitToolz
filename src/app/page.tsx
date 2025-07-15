@@ -110,7 +110,7 @@ export default function Home() {
   }, [state.errors, toast]);
 
   const handleCopy = () => {
-    if (!editedDocumentation) return;
+    if (editedDocumentation === null) return;
     navigator.clipboard.writeText(editedDocumentation).then(() => {
       toast({
         title: 'Copié !',
@@ -120,7 +120,7 @@ export default function Home() {
   };
 
   const handleDownload = () => {
-    if (!editedDocumentation) return;
+    if (editedDocumentation === null) return;
 
     const blob = new Blob([editedDocumentation], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -284,7 +284,8 @@ export default function Home() {
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h2: ({node, ...props}) => {
-                        const id = typeof props.children === 'string' ? slugify(props.children[0]) : '';
+                        const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
+                        const id = slugify(childText);
                         return <h2 id={id} {...props} />;
                       },
                     }}
@@ -296,7 +297,8 @@ export default function Home() {
                 <Textarea
                   value={editedDocumentation}
                   onChange={(e) => setEditedDocumentation(e.target.value)}
-                  className="text-sm whitespace-pre break-words h-full w-full overflow-auto rounded-lg bg-card p-6 ring-1 ring-border"
+                  className="text-sm whitespace-pre-wrap break-words w-full overflow-hidden rounded-lg bg-card p-6 ring-1 ring-border"
+                  rows={1}
                 />
               )}
             </CardContent>

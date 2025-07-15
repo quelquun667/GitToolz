@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState } from 'react';
+import { useEffect, useActionState, useState, useMemo } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 
 const initialState: FormState = {
   documentation: null,
   summary: null,
+  repoUrl: null,
   errors: null,
 };
 
@@ -40,11 +41,39 @@ function SubmitButton() {
   );
 }
 
+const slugify = (text: string) => {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '');
+};
+
+const extractRepoName = (url: string | null) => {
+  if (!url) return '';
+  try {
+    const path = new URL(url).pathname;
+    const parts = path.split('/').filter(p => p);
+    if (parts.length >= 2) {
+      return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+};
+
+
 export default function Home() {
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const { pending } = useFormStatus();
+
+  const headings = useMemo(() => {
+    if (!state.documentation) return [];
+    const headingLines = state.documentation.match(/^##\s(.+)/gm) || [];
+    return headingLines.map(line => line.replace(/^##\s/, ''));
+  }, [state.documentation]);
 
   useEffect(() => {
     if (state.errors) {
@@ -86,8 +115,9 @@ export default function Home() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-
+  
   const isGenerating = pending;
+  const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
@@ -137,6 +167,33 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
+        
+        {headings.length > 0 && !isGenerating && (
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <List className="h-5 w-5" />
+                Navigation
+              </CardTitle>
+               <CardDescription>Naviguez rapidement dans la documentation.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {headings.map((heading) => (
+                  <li key={heading}>
+                    <a
+                      href={`#${slugify(heading)}`}
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      {heading}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
       </aside>
       
       <main className="flex-1 flex flex-col p-4">
@@ -154,7 +211,7 @@ export default function Home() {
           <Card className="flex-1 flex flex-col shadow-lg">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-grow">
-                <CardTitle>Aperçu de la Documentation</CardTitle>
+                <CardTitle>Documentation pour <span className="text-primary">{repoName}</span></CardTitle>
                 <CardDescription>Ceci est la documentation générée pour votre projet.</CardDescription>
               </div>
               <div className="flex items-center gap-4 flex-wrap">
@@ -183,7 +240,15 @@ export default function Home() {
             <CardContent className="flex-1 pt-6 overflow-auto">
               {viewMode === 'preview' ? (
                 <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-card p-6 ring-1 ring-border">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h2: ({node, ...props}) => {
+                        const id = typeof props.children === 'string' ? slugify(props.children) : '';
+                        return <h2 id={id} {...props} />;
+                      },
+                    }}
+                  >
                     {state.documentation}
                   </ReactMarkdown>
                 </div>

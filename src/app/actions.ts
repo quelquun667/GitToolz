@@ -1,6 +1,6 @@
 'use server';
 
-import { generateDocumentationFlow, type StreamEvent } from '@/ai/flows/generate-documentation';
+import { generateDocumentationFlow, type StreamEvent, type GenerateDocumentationOutput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { z } from 'zod';
 
@@ -81,14 +81,13 @@ export async function getDocsStatusAction(
         // After the stream is done, we can get the final result.
         const result = await flow.response();
         if (result) {
-          const parsedResult = JSON.parse(result) as { documentation: string };
-          const { summary } = await summarizeDocumentation({ documentationContent: parsedResult.documentation });
+          const { summary } = await summarizeDocumentation({ documentationContent: result.documentation });
           
           // Send a final event with all the data
           const finalEvent: StreamEvent & { summary?: string } = {
             type: 'result',
             data: {
-              documentation: parsedResult.documentation,
+              documentation: result.documentation,
             },
             summary: summary
           }

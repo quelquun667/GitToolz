@@ -73,6 +73,7 @@ export const generateDocumentationFlow = ai.defineFlow(
     stream: {
       schema: z.custom<StreamEvent>(),
     },
+    outputSchema: GenerateDocumentationOutputSchema,
   },
   async function* (input) {
     yield { type: 'status', message: `Analyzing repository ${input.repoUrl}...` };
@@ -92,5 +93,7 @@ export const generateDocumentationFlow = ai.defineFlow(
     }
     
     yield { type: 'result', data: output };
+    
+    return output;
   }
 );

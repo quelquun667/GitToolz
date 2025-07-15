@@ -3,7 +3,7 @@
 /**
  * @fileOverview Documentation generation flow for a Git repository.
  *
- * - generateDocumentation - A function that generates documentation for a given repository URL and branch/tag.
+ * - generateDocumentationFlow - A function that generates documentation for a given repository URL and branch/tag.
  * - GenerateDocumentationInput - The input type for the generateDocumentation function.
  * - GenerateDocumentationOutput - The return type for the generateDocumentation function.
  */
@@ -22,6 +22,18 @@ const GenerateDocumentationOutputSchema = z.object({
   documentation: z.string().describe('The generated documentation for the repository.'),
 });
 export type GenerateDocumentationOutput = z.infer<typeof GenerateDocumentationOutputSchema>;
+
+type StatusUpdate = {
+  type: 'status';
+  message: string;
+};
+
+type FinalOutput = {
+  type: 'result';
+  data: GenerateDocumentationOutput;
+};
+
+export type StreamEvent = StatusUpdate | FinalOutput;
 
 
 const generateDocumentationPrompt = ai.definePrompt({
@@ -58,10 +70,30 @@ export const generateDocumentationFlow = ai.defineFlow(
   {
     name: 'generateDocumentationFlow',
     inputSchema: GenerateDocumentationInputSchema,
-    outputSchema: GenerateDocumentationOutputSchema,
+    outputSchema: z.string(), // Stream of events
+    stream: {
+      schema: z.custom<StreamEvent>(),
+    },
   },
-  async (input) => {
+  async function* (input) {
+    yield { type: 'status', message: `Analyzing repository ${input.repoUrl}...` };
+    
+    // Simulate analyzing sections
+    for (const section of input.sections) {
+      yield { type: 'status', message: `Planning section: ${section}...` };
+      await new Promise(resolve => setTimeout(resolve, 200)); // Simulate work
+    }
+
+    yield { type: 'status', message: 'Generating documentation with Gemini...' };
+
     const {output} = await generateDocumentationPrompt(input);
-    return output!;
+
+    if (!output) {
+      throw new Error('Failed to generate documentation.');
+    }
+    
+    yield { type: 'result', data: output };
+    
+    return JSON.stringify(output);
   }
 );

@@ -63,8 +63,8 @@ export default function Home() {
     if (!state.documentation) return;
     navigator.clipboard.writeText(state.documentation).then(() => {
       toast({
-        title: 'Copied!',
-        description: 'The markdown has been copied to your clipboard.',
+        title: 'Copié !',
+        description: 'Le markdown a été copié dans votre presse-papiers.',
       });
     });
   };
@@ -76,7 +76,7 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'documentation.md';
+    link.download = 'README.md';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,22 +93,22 @@ export default function Home() {
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Repository Details</CardTitle>
-            <CardDescription>Enter a public repository URL to get started.</CardDescription>
+            <CardTitle>Détails du Dépôt</CardTitle>
+            <CardDescription>Entrez l'URL d'un dépôt public pour commencer.</CardDescription>
           </CardHeader>
           <CardContent>
             <form action={formAction} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="repoUrl" className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-primary" />
-                  Repository URL
+                  URL du Dépôt
                 </Label>
                 <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="branch" className="flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-primary" />
-                  Branch / Tag
+                  Branche / Tag
                 </Label>
                 <Input id="branch" name="branch" placeholder="main" required />
               </div>
@@ -122,9 +122,9 @@ export default function Home() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookText className="h-5 w-5" />
-                Outline
+                Aperçu
               </CardTitle>
-              <CardDescription>A summary of the generated documentation.</CardDescription>
+              <CardDescription>Un résumé de la documentation générée.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow overflow-auto">
               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{state.summary}</p>
@@ -138,23 +138,23 @@ export default function Home() {
           <Card className="flex-1 flex flex-col shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Documentation Preview</CardTitle>
-                <CardDescription>This is the generated documentation for your project.</CardDescription>
+                <CardTitle>Aperçu de la Documentation</CardTitle>
+                <CardDescription>Ceci est la documentation générée pour votre projet.</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleCopy} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
                   <Copy className="mr-2 h-4 w-4" />
-                  Copy Markdown
+                  Copier le Markdown
                 </Button>
                 <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
                   <Download className="mr-2 h-4 w-4" />
-                  Download
+                  Télécharger
                 </Button>
               </div>
             </CardHeader>
             <Separator />
             <CardContent className="flex-1 pt-6 overflow-auto">
-              <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-muted/50 p-6">
+              <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-card p-6 ring-1 ring-border">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {state.documentation}
                 </ReactMarkdown>
@@ -165,9 +165,9 @@ export default function Home() {
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
             <div className="text-center">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No documentation generated</h3>
+              <h3 className="mt-4 text-lg font-medium">Aucune documentation générée</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter a repository URL and branch to generate documentation.
+                Entrez l'URL d'un dépôt et une branche pour générer la documentation.
               </p>
             </div>
           </div>

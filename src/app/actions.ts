@@ -1,6 +1,6 @@
 'use server';
 
-import { generateDocumentationFlow, type StreamEvent, type GenerateDocumentationOutput } from '@/ai/flows/generate-documentation';
+import { generateDocumentation } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { z } from 'zod';
 
@@ -22,8 +22,6 @@ export type FormState = {
     sections?: string[];
     _form?: string[];
   } | null;
-  // This key is used to trigger re-fetching of the status stream
-  generationId?: number; 
 };
 
 export async function generateDocsAction(
@@ -49,59 +47,25 @@ export async function generateDocsAction(
   
   const { repoUrl, branch, sections } = validatedFields.data;
 
-  // This part of the action remains synchronous. It just kicks off the stream.
-  // The client will then use the generationId to fetch the stream's content.
-  return {
-    documentation: null,
-    summary: null,
-    repoUrl,
-    branch,
-    sections,
-    errors: null,
-    generationId: Date.now(), // Use a unique ID to trigger the stream fetch
-  };
-}
+  try {
+    const { documentation } = await generateDocumentation({ repoUrl, branch, sections });
+    const { summary } = await summarizeDocumentation({ documentationContent: documentation });
 
-// This is a new, separate action for streaming status updates.
-export async function getDocsStatusAction(
-  repoUrl: string,
-  branch: string,
-  sections: string[]
-): Promise<ReadableStream> {
-  const flow = generateDocumentationFlow({ repoUrl, branch, sections });
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const chunk of flow.stream()) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-        }
-
-        // After the stream is done, we can get the final result.
-        const result = await flow.output();
-        if (result) {
-          const { summary } = await summarizeDocumentation({ documentationContent: result.documentation });
-          
-          // Send a final event with all the data
-          const finalEvent: StreamEvent & { summary?: string } = {
-            type: 'result',
-            data: {
-              documentation: result.documentation,
-            },
-            summary: summary
-          }
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalEvent)}\n\n`));
-        }
-        controller.close();
-      } catch (e) {
-        const error = e instanceof Error ? e.message : 'An unknown streaming error occurred.';
-        const errorEvent = { type: 'error', message: error };
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
-        controller.close();
+    return {
+      documentation,
+      summary,
+      repoUrl,
+      branch,
+      sections,
+      errors: null,
+    };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
+     return {
+      ...prevState, // Keep old state on error
+      errors: {
+        _form: [error],
       }
-    },
-  });
-
-  return stream;
+    };
+  }
 }

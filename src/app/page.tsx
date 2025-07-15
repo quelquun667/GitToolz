@@ -81,10 +81,14 @@ export default function Home() {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
+  const [selectedSections, setSelectedSections] = useState<string[]>(SECTIONS.map(s => s.value));
 
   useEffect(() => {
     setEditedDocumentation(state.documentation);
-  }, [state.documentation]);
+    if (state.sections) {
+      setSelectedSections(state.sections);
+    }
+  }, [state.documentation, state.sections]);
 
   const headings = useMemo(() => {
     if (!editedDocumentation) return [];
@@ -132,6 +136,12 @@ export default function Home() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+  
+  const handleSectionChange = (sectionValue: string, checked: boolean) => {
+    setSelectedSections(prev => 
+      checked ? [...prev, sectionValue] : prev.filter(s => s !== sectionValue)
+    );
   };
   
   const { pending } = useFormStatus();
@@ -187,7 +197,8 @@ export default function Home() {
                     id={section.id} 
                     name="sections" 
                     value={section.value} 
-                    defaultChecked={state.sections === null ? true : state.sections.includes(section.value)}
+                    checked={selectedSections.includes(section.value)}
+                    onCheckedChange={(checked) => handleSectionChange(section.value, checked as boolean)}
                   />
                   <Label htmlFor={section.id} className="font-normal text-sm">
                     {section.label}

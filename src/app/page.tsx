@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState, useMemo, useRef } from 'react';
+import { useEffect, useActionState, useState, useMemo, useRef, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -91,6 +91,7 @@ const extractRepoName = (url: string | null) => {
 
 
 export default function Home() {
+  const [isPending, startTransition] = useTransition();
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
@@ -162,22 +163,27 @@ export default function Home() {
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    // If documentation already exists, prevent default form submission
+    // and show the confirmation dialog instead.
     if (state.documentation) {
       event.preventDefault();
       setShowConfirmationDialog(true);
     }
+    // Otherwise, let the form submit normally (which will trigger formAction).
   };
 
   const handleConfirmRegenerate = () => {
     setShowConfirmationDialog(false);
     if (formRef.current) {
-        const formData = new FormData(formRef.current);
+      const formData = new FormData(formRef.current);
+      startTransition(() => {
         formAction(formData);
+      });
     }
   };
   
   const { pending } = useFormStatus();
-  const isGenerating = pending;
+  const isGenerating = pending || isPending;
   const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
 
   return (
@@ -390,5 +396,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

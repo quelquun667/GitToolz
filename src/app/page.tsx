@@ -4,7 +4,7 @@ import { useEffect, useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { generateDocsAction, type FormState } from '@/app/actions';
+import { generateDocsAction, getDocsStatusAction, type FormState } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,12 +13,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { generateDocumentationFlow } from '@/ai/flows/generate-documentation';
 
 const initialState: FormState = {
   documentation: null,
   summary: null,
-  status: null,
   errors: null,
 };
 
@@ -28,26 +26,49 @@ function SubmitButton({ setPending, setStatus }: { setPending: (pending: boolean
   useEffect(() => {
     setPending(pending);
     if (!pending) {
-      setStatus(null);
+      setStatus('Terminé');
     }
   }, [pending, setPending, setStatus]);
 
   useEffect(() => {
-    async function runStream() {
-      if (pending && data) {
-        const repoUrl = data.get('repoUrl') as string;
-        const branch = data.get('branch') as string;
-        if (repoUrl && branch) {
-          const { stream } = generateDocumentationFlow({ repoUrl, branch });
-          for await (const chunk of stream) {
-            if (chunk.status) {
-              setStatus(chunk.status);
+    if (pending && data) {
+      let active = true;
+      async function runStream() {
+        try {
+          const stream = await getDocsStatusAction(data!);
+          const reader = stream.getReader();
+          const decoder = new TextDecoder();
+
+          while (active) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            const eventData = chunk.replace(/^data: /, '').trim();
+            if (eventData) {
+              try {
+                const parsed = JSON.parse(eventData);
+                if (parsed.status) {
+                  setStatus(parsed.status);
+                }
+              } catch (e) {
+                // Ignore parsing errors for now
+              }
             }
+          }
+        } catch (error) {
+          console.error("Streaming error:", error);
+          if (active) {
+            setStatus("An error occurred during generation.");
           }
         }
       }
+      runStream();
+      
+      return () => {
+        active = false;
+      }
     }
-    runStream();
   }, [pending, data, setStatus]);
 
   return (
@@ -90,6 +111,15 @@ export default function Home() {
       }
     }
   }, [state.errors, toast]);
+
+  useEffect(() => {
+    if (!pending && state.documentation) {
+       setStatus('Terminé');
+    }
+    if (pending) {
+       setStatus('Initialisation...');
+    }
+  }, [pending, state.documentation]);
   
   const handleCopy = () => {
     if (!state.documentation) return;
@@ -149,7 +179,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {state.summary && (
+        {state.summary && !pending && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -183,7 +213,7 @@ export default function Home() {
                 <CardTitle>Aperçu de la Documentation</CardTitle>
                 <CardDescription>Ceci est la documentation générée pour votre projet.</CardDescription>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 flex-wrap">
                  <div className="flex items-center space-x-2">
                   <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
                   <Switch

@@ -68,18 +68,18 @@ export async function getDocsStatusAction(
   branch: string,
   sections: string[]
 ): Promise<ReadableStream> {
-  const flow = await generateDocumentationFlow({ repoUrl, branch, sections });
+  const flow = generateDocumentationFlow({ repoUrl, branch, sections });
 
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder();
       try {
-        for await (const chunk of flow.stream()) {
+        for await (const chunk of flow) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
         }
 
         // After the stream is done, we can get the final result.
-        const result = await flow.response();
+        const result = await flow.output();
         if (result) {
           const { summary } = await summarizeDocumentation({ documentationContent: result.documentation });
           

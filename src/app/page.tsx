@@ -17,6 +17,7 @@ import { Switch } from '@/components/ui/switch';
 const initialState: FormState = {
   documentation: null,
   summary: null,
+  status: null,
   errors: null,
 };
 
@@ -27,12 +28,12 @@ function SubmitButton() {
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Generating...
+          Génération...
         </>
       ) : (
         <>
           <Sparkles className="mr-2 h-4 w-4" />
-          Generate Docs
+          Générer la documentation
         </>
       )}
     </Button>
@@ -74,7 +75,7 @@ export default function Home() {
   const handleDownload = () => {
     if (!state.documentation) return;
 
-    const blob = new Blob([state.documentation], { type: 'text/markdown;charset=utf-t' });
+    const blob = new Blob([state.documentation], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -84,10 +85,12 @@ export default function Home() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+  
+  const { pending } = useFormStatus();
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
-      <aside className="w-[380px] flex-shrink-0 border-r border-border p-4 flex flex-col gap-6">
+    <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
+      <aside className="w-full md:w-[380px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6">
         <header className="flex items-center gap-3 px-2">
           <FileCode2 className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">GitDocs</h1>
@@ -136,10 +139,20 @@ export default function Home() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4">
-        {state.documentation ? (
+        {pending ? (
+          <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+            <div className="text-center">
+              <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+              <h3 className="mt-4 text-lg font-medium">Génération en cours...</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {state.status || 'Initialisation...'}
+              </p>
+            </div>
+          </div>
+        ) : state.documentation ? (
           <Card className="flex-1 flex flex-col shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-grow">
                 <CardTitle>Aperçu de la Documentation</CardTitle>
                 <CardDescription>Ceci est la documentation générée pour votre projet.</CardDescription>
               </div>
@@ -154,11 +167,11 @@ export default function Home() {
                   <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Aperçu</Label>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={handleCopy} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                  <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
                     <Copy className="mr-2 h-4 w-4" />
-                    Copier le Markdown
+                    Copier
                   </Button>
-                  <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                  <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
                     <Download className="mr-2 h-4 w-4" />
                     Télécharger
                   </Button>

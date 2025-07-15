@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState, useState, useMemo } from 'react';
+import { useEffect, useActionState, useState, useMemo, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -10,11 +10,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 const initialState: FormState = {
   documentation: null,
@@ -34,8 +45,11 @@ const SECTIONS = [
   { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
 ];
 
-function SubmitButton() {
+function SubmitButton({ hasExistingDocs }: { hasExistingDocs: boolean }) {
   const { pending } = useFormStatus();
+
+  const buttonText = hasExistingDocs ? 'Régénérer la documentation' : 'Générer la documentation';
+  const Icon = hasExistingDocs ? RefreshCw : Sparkles;
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
@@ -46,8 +60,8 @@ function SubmitButton() {
         </>
       ) : (
         <>
-          <Sparkles className="mr-2 h-4 w-4" />
-          Générer la documentation
+          <Icon className="mr-2 h-4 w-4" />
+          {buttonText}
         </>
       )}
     </Button>
@@ -82,6 +96,9 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const [selectedSections, setSelectedSections] = useState<string[]>(SECTIONS.map(s => s.value));
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
 
   useEffect(() => {
     setEditedDocumentation(state.documentation);
@@ -143,6 +160,21 @@ export default function Home() {
       checked ? [...prev, sectionValue] : prev.filter(s => s !== sectionValue)
     );
   };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    if (state.documentation) {
+      event.preventDefault();
+      setShowConfirmationDialog(true);
+    }
+  };
+
+  const handleConfirmRegenerate = () => {
+    setShowConfirmationDialog(false);
+    if (formRef.current) {
+        const formData = new FormData(formRef.current);
+        formAction(formData);
+    }
+  };
   
   const { pending } = useFormStatus();
   const isGenerating = pending;
@@ -150,13 +182,35 @@ export default function Home() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
+      <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to regenerate?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Any manual edits you've made to the current documentation will be lost. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRegenerate}>
+              Regenerate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <aside className="w-full md:w-[380px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
         <header className="flex items-center gap-3 px-2">
           <FileCode2 className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">GitDocs</h1>
         </header>
 
-        <form action={formAction} className="space-y-6">
+        <form 
+          ref={formRef}
+          action={formAction} 
+          onSubmit={handleSubmit}
+          className="space-y-6"
+        >
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Détails du Dépôt</CardTitle>
@@ -208,7 +262,7 @@ export default function Home() {
             </CardContent>
           </Card>
           
-          <SubmitButton />
+          <SubmitButton hasExistingDocs={!!state.documentation} />
         </form>
 
         {state.summary && !isGenerating && (
@@ -336,3 +390,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

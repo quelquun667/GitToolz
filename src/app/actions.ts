@@ -68,7 +68,7 @@ export async function getDocsStatusAction(
   branch: string,
   sections: string[]
 ): Promise<ReadableStream> {
-  const flow = await generateDocumentationFlow.run({ repoUrl, branch, sections });
+  const flow = await generateDocumentationFlow({ repoUrl, branch, sections });
 
   const stream = new ReadableStream({
     async start(controller) {

@@ -200,7 +200,7 @@ export default function Home() {
   const handleDownload = () => {
     if (editedDocumentation === null) return;
 
-    const blob = new Blob([editedDocumentation], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([editedDocumentation], { type: 'text/markdown;charset=utf-t' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -438,7 +438,7 @@ export default function Home() {
                 <Textarea
                   value={editedDocumentation}
                   onChange={(e) => setEditedDocumentation(e.target.value)}
-                  className="text-sm whitespace-pre-wrap break-words w-full overflow-hidden rounded-lg bg-card p-6 ring-1 ring-border"
+                  className="w-full overflow-hidden"
                   rows={1}
                 />
               )}

@@ -31,7 +31,11 @@ const generateDocumentationPrompt = ai.definePrompt({
 
   Given the repository URL: {{{repoUrl}}} and branch/tag: {{{branch}}}, generate comprehensive documentation in Markdown format.
   
-  The documentation MUST be structured like a professional README.md file and include the following sections:
+  The documentation MUST be structured like a professional README.md file.
+
+  It MUST begin with a "## Table of Contents" section. This section should list the main sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
+
+  After the table of contents, include the following sections:
   - **Project Overview**: A brief introduction to the project.
   - **Features**: A bulleted list of key features.
   - **Prerequisites**: What users need to have installed to run the project (e.g., Node.js, Python).

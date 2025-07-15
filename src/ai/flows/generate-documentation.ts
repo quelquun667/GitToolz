@@ -70,7 +70,6 @@ export const generateDocumentationFlow = ai.defineFlow(
   {
     name: 'generateDocumentationFlow',
     inputSchema: GenerateDocumentationInputSchema,
-    outputSchema: GenerateDocumentationOutputSchema,
     stream: {
       schema: z.custom<StreamEvent>(),
     },
@@ -93,7 +92,5 @@ export const generateDocumentationFlow = ai.defineFlow(
     }
     
     yield { type: 'result', data: output };
-    
-    return output;
   }
 );

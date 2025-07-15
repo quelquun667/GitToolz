@@ -30,15 +30,19 @@ const generateDocumentationPrompt = ai.definePrompt({
   name: 'generateDocumentationPrompt',
   input: {schema: GenerateDocumentationInputSchema},
   output: {schema: GenerateDocumentationOutputSchema},
-  prompt: `You are an AI assistant that generates documentation for a Git repository.
+  prompt: `You are an AI assistant that generates a high-quality README.md file for a Git repository.
 
-  Given the repository URL: {{{repoUrl}}} and branch/tag: {{{branch}}}, generate comprehensive documentation.
-  The documentation should include an overview of the project, its features, and usage instructions.
-  Return the documentation as a markdown string.
-  Follow these formatting guidelines:
-  - Use clear and concise language.
-  - Include code examples where appropriate.
-  - Organize the documentation into logical sections with headings and subheadings.
+  Given the repository URL: {{{repoUrl}}} and branch/tag: {{{branch}}}, generate comprehensive documentation in Markdown format.
+  
+  The documentation MUST be structured like a professional README.md file and include the following sections:
+  - **Project Overview**: A brief introduction to the project.
+  - **Features**: A bulleted list of key features.
+  - **Prerequisites**: What users need to have installed to run the project (e.g., Node.js, Python).
+  - **Installation**: A step-by-step guide on how to install project dependencies.
+  - **Usage / Getting Started**: Clear instructions and code examples on how to run the project.
+  
+  Use clear and concise language. Format code blocks appropriately for markdown.
+  Organize the documentation into logical sections with clear headings (e.g., '## Overview').
 `,
 });
 

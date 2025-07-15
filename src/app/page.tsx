@@ -4,7 +4,8 @@ import { useEffect, useActionState, useState, useMemo, useRef, useTransition } f
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { generateDocsAction, type FormState } from '@/app/actions';
+import { generateDocsAction, getDocsStatusAction, type FormState } from '@/app/actions';
+import type { StreamEvent } from '@/ai/flows/generate-documentation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,14 +46,15 @@ const SECTIONS = [
   { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
 ];
 
-function SubmitButton({ hasExistingDocs }: { hasExistingDocs: boolean }) {
+function SubmitButton({ hasExistingDocs, disabled }: { hasExistingDocs: boolean, disabled: boolean }) {
   const { pending } = useFormStatus();
 
   const buttonText = hasExistingDocs ? 'Régénérer la documentation' : 'Générer la documentation';
   const Icon = hasExistingDocs ? RefreshCw : Sparkles;
+  const isDisabled = pending || disabled;
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" className="w-full" disabled={isDisabled}>
       {pending ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -91,28 +93,64 @@ const extractRepoName = (url: string | null) => {
 
 
 export default function Home() {
-  const [isPending, startTransition] = useTransition();
+  const [isGenerating, startTransition] = useTransition();
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const [selectedSections, setSelectedSections] = useState<string[]>(SECTIONS.map(s => s.value));
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [finalState, setFinalState] = useState<FormState>(initialState);
+  const [progressMessages, setProgressMessages] = useState<string[]>([]);
+  
   const formRef = useRef<HTMLFormElement>(null);
 
-
   useEffect(() => {
-    setEditedDocumentation(state.documentation);
-    if (state.sections) {
-      setSelectedSections(state.sections);
-    }
-  }, [state.documentation, state.sections]);
+    if (state.generationId && state.repoUrl && state.branch && state.sections) {
+      const { repoUrl, branch, sections } = state;
+      const streamPromise = getDocsStatusAction(repoUrl, branch, sections);
 
-  const headings = useMemo(() => {
-    if (!editedDocumentation) return [];
-    const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
-    return headingLines.map(line => line.replace(/^##\s/, ''));
-  }, [editedDocumentation]);
+      streamPromise.then(stream => {
+        const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
+        const read = () => {
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              return;
+            }
+
+            const events = value.split('data: ').filter(Boolean);
+            for (const event of events) {
+              try {
+                const chunk = JSON.parse(event.trim()) as StreamEvent & { summary?: string, message?: string };
+                if (chunk.type === 'status') {
+                  setProgressMessages(prev => [...prev, chunk.message]);
+                } else if (chunk.type === 'result') {
+                  setFinalState(prev => ({
+                    ...prev,
+                    documentation: chunk.data.documentation,
+                    summary: chunk.summary || null,
+                    repoUrl: state.repoUrl,
+                    branch: state.branch,
+                    sections: state.sections,
+                  }));
+                } else if ((chunk as any).type === 'error') {
+                   toast({
+                    variant: 'destructive',
+                    title: 'Error during generation',
+                    description: chunk.message,
+                  });
+                }
+              } catch (e) {
+                console.error('Failed to parse stream chunk', e);
+              }
+            }
+            read();
+          });
+        };
+        read();
+      });
+    }
+  }, [state.generationId, state.repoUrl, state.branch, state.sections, toast]);
 
   useEffect(() => {
     if (state.errors) {
@@ -128,9 +166,26 @@ export default function Home() {
           title: 'Error',
           description: errorMessages.join('\n'),
         });
+        setProgressMessages([]);
       }
     }
   }, [state.errors, toast]);
+
+  useEffect(() => {
+    setEditedDocumentation(finalState.documentation);
+    if (finalState.sections) {
+      setSelectedSections(finalState.sections);
+    }
+    if (finalState.documentation) {
+      setProgressMessages([]);
+    }
+  }, [finalState.documentation, finalState.sections]);
+  
+  const headings = useMemo(() => {
+    if (!editedDocumentation) return [];
+    const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
+    return headingLines.map(line => line.replace(/^##\s/, ''));
+  }, [editedDocumentation]);
 
   const handleCopy = () => {
     if (editedDocumentation === null) return;
@@ -163,13 +218,12 @@ export default function Home() {
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    // If documentation already exists, prevent default form submission
-    // and show the confirmation dialog instead.
-    if (state.documentation) {
-      event.preventDefault();
+    event.preventDefault();
+    if (finalState.documentation) {
       setShowConfirmationDialog(true);
+    } else {
+      handleConfirmRegenerate();
     }
-    // Otherwise, let the form submit normally (which will trigger formAction).
   };
 
   const handleConfirmRegenerate = () => {
@@ -177,15 +231,18 @@ export default function Home() {
     if (formRef.current) {
       const formData = new FormData(formRef.current);
       startTransition(() => {
+        setFinalState(initialState);
+        setEditedDocumentation(null);
+        setProgressMessages([]);
         formAction(formData);
       });
     }
   };
   
   const { pending } = useFormStatus();
-  const isGenerating = pending || isPending;
-  const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
-
+  const isActuallyGenerating = isGenerating || progressMessages.length > 0 && !finalState.documentation;
+  const repoName = useMemo(() => extractRepoName(finalState.repoUrl ?? state.repoUrl), [finalState.repoUrl, state.repoUrl]);
+  
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
       <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
@@ -213,7 +270,6 @@ export default function Home() {
 
         <form 
           ref={formRef}
-          action={formAction} 
           onSubmit={handleSubmit}
           className="space-y-6"
         >
@@ -229,14 +285,14 @@ export default function Home() {
                     <Globe className="h-4 w-4 text-primary" />
                     URL du Dépôt
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required defaultValue={state.repoUrl ?? ''}/>
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required defaultValue={finalState.repoUrl ?? ''}/>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="branch" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branche / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required defaultValue={state.branch ?? ''}/>
+                  <Input id="branch" name="branch" placeholder="main" required defaultValue={finalState.branch ?? ''}/>
                 </div>
               </div>
             </CardContent>
@@ -268,10 +324,10 @@ export default function Home() {
             </CardContent>
           </Card>
           
-          <SubmitButton hasExistingDocs={!!state.documentation} />
+          <SubmitButton hasExistingDocs={!!finalState.documentation} disabled={isActuallyGenerating} />
         </form>
 
-        {state.summary && !isGenerating && (
+        {finalState.summary && !isActuallyGenerating && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -281,12 +337,12 @@ export default function Home() {
               <CardDescription>Un résumé de la documentation générée.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow overflow-auto">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{state.summary}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{finalState.summary}</p>
             </CardContent>
           </Card>
         )}
         
-        {headings.length > 0 && !isGenerating && (
+        {headings.length > 0 && !isActuallyGenerating && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -315,14 +371,21 @@ export default function Home() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        {isGenerating ? (
+        {isActuallyGenerating ? (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center">
+            <div className="text-center p-4">
               <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
               <h3 className="mt-4 text-lg font-medium">Génération en cours...</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Veuillez patienter...
-              </p>
+              <div className="mt-4 text-sm text-muted-foreground text-left max-w-md mx-auto">
+                <ul className="space-y-1">
+                  {progressMessages.map((msg, index) => (
+                    <li key={index} className="animate-in fade-in-0 duration-500">
+                      <span className="text-primary mr-2">✓</span>
+                      {msg}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         ) : editedDocumentation !== null ? (

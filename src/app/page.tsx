@@ -4,7 +4,7 @@ import { useEffect, useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { generateDocsAction, getDocsStatusAction, type FormState } from '@/app/actions';
+import { generateDocsAction, type FormState } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,56 +20,8 @@ const initialState: FormState = {
   errors: null,
 };
 
-function SubmitButton({ setPending, setStatus }: { setPending: (pending: boolean) => void, setStatus: (status: string | null) => void }) {
-  const { pending, data } = useFormStatus();
-
-  useEffect(() => {
-    setPending(pending);
-    if (!pending) {
-      setStatus('Terminé');
-    }
-  }, [pending, setPending, setStatus]);
-
-  useEffect(() => {
-    if (pending && data) {
-      let active = true;
-      async function runStream() {
-        try {
-          const stream = await getDocsStatusAction(data!);
-          const reader = stream.getReader();
-          const decoder = new TextDecoder();
-
-          while (active) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const eventData = chunk.replace(/^data: /, '').trim();
-            if (eventData) {
-              try {
-                const parsed = JSON.parse(eventData);
-                if (parsed.status) {
-                  setStatus(parsed.status);
-                }
-              } catch (e) {
-                // Ignore parsing errors for now
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Streaming error:", error);
-          if (active) {
-            setStatus("An error occurred during generation.");
-          }
-        }
-      }
-      runStream();
-      
-      return () => {
-        active = false;
-      }
-    }
-  }, [pending, data, setStatus]);
+function SubmitButton() {
+  const { pending } = useFormStatus();
 
   return (
     <Button type="submit" className="w-full" disabled={pending}>
@@ -92,8 +44,7 @@ export default function Home() {
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
-  const [pending, setPending] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const { pending } = useFormStatus();
 
   useEffect(() => {
     if (state.errors) {
@@ -112,15 +63,6 @@ export default function Home() {
     }
   }, [state.errors, toast]);
 
-  useEffect(() => {
-    if (!pending && state.documentation) {
-       setStatus('Terminé');
-    }
-    if (pending) {
-       setStatus('Initialisation...');
-    }
-  }, [pending, state.documentation]);
-  
   const handleCopy = () => {
     if (!state.documentation) return;
     navigator.clipboard.writeText(state.documentation).then(() => {
@@ -144,6 +86,8 @@ export default function Home() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  const isGenerating = pending;
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
@@ -174,12 +118,12 @@ export default function Home() {
                 </Label>
                 <Input id="branch" name="branch" placeholder="main" required />
               </div>
-              <SubmitButton setPending={setPending} setStatus={setStatus} />
+              <SubmitButton />
             </form>
           </CardContent>
         </Card>
 
-        {state.summary && !pending && (
+        {state.summary && !isGenerating && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -196,13 +140,13 @@ export default function Home() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4">
-        {pending ? (
+        {isGenerating ? (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
             <div className="text-center">
               <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
               <h3 className="mt-4 text-lg font-medium">Génération en cours...</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {status || 'Initialisation...'}
+                Veuillez patienter...
               </p>
             </div>
           </div>

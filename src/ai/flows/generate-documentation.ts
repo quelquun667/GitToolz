@@ -48,27 +48,8 @@ export const generateDocumentationFlow = ai.defineFlow(
     name: 'generateDocumentationFlow',
     inputSchema: GenerateDocumentationInputSchema,
     outputSchema: GenerateDocumentationOutputSchema,
-    stream: {
-      schema: z.object({
-        status: z.string(),
-      }),
-    },
   },
-  async function* (input) {
-    yield { status: 'Analyse du dépôt...' };
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    yield { status: 'Examen de la structure des fichiers...' };
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    yield { status: 'Lecture de `package.json`...' };
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    yield { status: 'Lecture de `src/app/page.tsx`...' };
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    yield { status: 'Génération de la documentation...' };
-
+  async (input) => {
     const {output} = await generateDocumentationPrompt(input);
     return output!;
   }

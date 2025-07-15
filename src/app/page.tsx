@@ -14,6 +14,7 @@ import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, File
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 const initialState: FormState = {
   documentation: null,
@@ -77,13 +78,18 @@ export default function Home() {
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const { pending } = useFormStatus();
 
-  const headings = useMemo(() => {
-    if (!state.documentation) return [];
-    const headingLines = state.documentation.match(/^##\s(.+)/gm) || [];
-    return headingLines.map(line => line.replace(/^##\s/, ''));
+  useEffect(() => {
+    setEditedDocumentation(state.documentation);
   }, [state.documentation]);
+
+  const headings = useMemo(() => {
+    if (!editedDocumentation) return [];
+    const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
+    return headingLines.map(line => line.replace(/^##\s/, ''));
+  }, [editedDocumentation]);
 
   useEffect(() => {
     if (state.errors) {
@@ -104,8 +110,8 @@ export default function Home() {
   }, [state.errors, toast]);
 
   const handleCopy = () => {
-    if (!state.documentation) return;
-    navigator.clipboard.writeText(state.documentation).then(() => {
+    if (!editedDocumentation) return;
+    navigator.clipboard.writeText(editedDocumentation).then(() => {
       toast({
         title: 'Copié !',
         description: 'Le markdown a été copié dans votre presse-papiers.',
@@ -114,9 +120,9 @@ export default function Home() {
   };
 
   const handleDownload = () => {
-    if (!state.documentation) return;
+    if (!editedDocumentation) return;
 
-    const blob = new Blob([state.documentation], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([editedDocumentation], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -241,7 +247,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-        ) : state.documentation ? (
+        ) : editedDocumentation !== null ? (
           <Card className="flex-1 flex flex-col shadow-lg">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-grow">
@@ -283,13 +289,15 @@ export default function Home() {
                       },
                     }}
                   >
-                    {state.documentation}
+                    {editedDocumentation}
                   </ReactMarkdown>
                 </div>
               ) : (
-                <pre className="text-sm whitespace-pre-wrap break-words h-full w-full overflow-auto rounded-lg bg-card p-6 ring-1 ring-border">
-                  <code>{state.documentation}</code>
-                </pre>
+                <Textarea
+                  value={editedDocumentation}
+                  onChange={(e) => setEditedDocumentation(e.target.value)}
+                  className="text-sm whitespace-pre break-words h-full w-full overflow-auto rounded-lg bg-card p-6 ring-1 ring-border"
+                />
               )}
             </CardContent>
           </Card>

@@ -2,13 +2,15 @@
 
 import { useEffect, useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { generateDocsAction, type FormState } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2 } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const initialState: FormState = {
@@ -56,6 +58,16 @@ export default function Home() {
       }
     }
   }, [state.errors, toast]);
+  
+  const handleCopy = () => {
+    if (!state.documentation) return;
+    navigator.clipboard.writeText(state.documentation).then(() => {
+      toast({
+        title: 'Copied!',
+        description: 'The markdown has been copied to your clipboard.',
+      });
+    });
+  };
 
   const handleDownload = () => {
     if (!state.documentation) return;
@@ -129,16 +141,24 @@ export default function Home() {
                 <CardTitle>Documentation Preview</CardTitle>
                 <CardDescription>This is the generated documentation for your project.</CardDescription>
               </div>
-              <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                <Download className="mr-2 h-4 w-4" />
-                Download Markdown
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleCopy} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Markdown
+                </Button>
+                <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </div>
             </CardHeader>
             <Separator />
             <CardContent className="flex-1 pt-6 overflow-auto">
-                <div className="bg-muted/50 rounded-lg h-full">
-                    <pre className="p-6 text-sm text-foreground h-full w-full overflow-auto whitespace-pre-wrap break-words">{state.documentation}</pre>
-                </div>
+              <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-muted/50 p-6">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {state.documentation}
+                </ReactMarkdown>
+              </div>
             </CardContent>
           </Card>
         ) : (

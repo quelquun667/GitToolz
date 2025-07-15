@@ -7,6 +7,7 @@ import { z } from 'zod';
 const formSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
   branch: z.string().min(1, { message: 'Branch or tag is required.' }),
+  sections: z.array(z.string()).min(1, { message: 'Please select at least one section.' }),
 });
 
 export type FormState = {
@@ -16,6 +17,7 @@ export type FormState = {
   errors?: {
     repoUrl?: string[];
     branch?: string[];
+    sections?: string[];
     _form?: string[];
   } | null;
 };
@@ -27,6 +29,7 @@ export async function generateDocsAction(
   const validatedFields = formSchema.safeParse({
     repoUrl: formData.get('repoUrl'),
     branch: formData.get('branch'),
+    sections: formData.getAll('sections'),
   });
 
   if (!validatedFields.success) {
@@ -39,8 +42,8 @@ export async function generateDocsAction(
   }
 
   try {
-    const { repoUrl, branch } = validatedFields.data;
-    const documentationResponse = await generateDocumentationFlow({ repoUrl, branch });
+    const { repoUrl, branch, sections } = validatedFields.data;
+    const documentationResponse = await generateDocumentationFlow({ repoUrl, branch, sections });
 
     if (!documentationResponse || !documentationResponse.documentation) {
       return {

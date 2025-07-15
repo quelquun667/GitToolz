@@ -12,6 +12,7 @@ const formSchema = z.object({
 export type FormState = {
   documentation: string | null;
   summary: string | null;
+  repoUrl: string | null;
   errors?: {
     repoUrl?: string[];
     branch?: string[];
@@ -32,6 +33,7 @@ export async function generateDocsAction(
     return {
       documentation: null,
       summary: null,
+      repoUrl: null,
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -44,6 +46,7 @@ export async function generateDocsAction(
       return {
         documentation: null,
         summary: null,
+        repoUrl: null,
         errors: { _form: ['Failed to generate documentation. The model returned an empty response.'] },
       };
     }
@@ -52,12 +55,13 @@ export async function generateDocsAction(
 
     const { summary } = await summarizeDocumentation({ documentationContent: documentation });
     
-    return { documentation, summary, errors: null };
+    return { documentation, summary, repoUrl, errors: null };
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred.';
     return { 
       documentation: null, 
       summary: null,
+      repoUrl: null,
       errors: { _form: [error] } 
     };
   }

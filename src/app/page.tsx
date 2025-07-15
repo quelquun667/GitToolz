@@ -20,6 +20,8 @@ const initialState: FormState = {
   documentation: null,
   summary: null,
   repoUrl: null,
+  branch: null,
+  sections: null,
   errors: null,
 };
 
@@ -79,7 +81,6 @@ export default function Home() {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
-  const { pending } = useFormStatus();
 
   useEffect(() => {
     setEditedDocumentation(state.documentation);
@@ -133,6 +134,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   };
   
+  const { pending } = useFormStatus();
   const isGenerating = pending;
   const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
 
@@ -157,14 +159,14 @@ export default function Home() {
                     <Globe className="h-4 w-4 text-primary" />
                     URL du Dépôt
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required />
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required defaultValue={state.repoUrl ?? ''}/>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="branch" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branche / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required />
+                  <Input id="branch" name="branch" placeholder="main" required defaultValue={state.branch ?? ''}/>
                 </div>
               </div>
             </CardContent>
@@ -181,7 +183,12 @@ export default function Home() {
             <CardContent className="space-y-3">
               {SECTIONS.map((section) => (
                 <div key={section.id} className="flex items-center space-x-2">
-                  <Checkbox id={section.id} name="sections" value={section.value} defaultChecked />
+                  <Checkbox 
+                    id={section.id} 
+                    name="sections" 
+                    value={section.value} 
+                    defaultChecked={!state.sections || state.sections.includes(section.value)}
+                  />
                   <Label htmlFor={section.id} className="font-normal text-sm">
                     {section.label}
                   </Label>
@@ -236,7 +243,7 @@ export default function Home() {
         )}
       </aside>
       
-      <main className="flex-1 flex flex-col p-4">
+      <main className="flex-1 flex flex-col p-4 md:pl-0">
         {isGenerating ? (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
             <div className="text-center">

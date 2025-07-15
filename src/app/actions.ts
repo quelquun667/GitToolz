@@ -82,8 +82,7 @@ export async function getDocsStatusAction(formData: FormData): Promise<ReadableS
   }
   
   const { repoUrl, branch } = validatedFields.data;
-  const flowResult = generateDocumentationFlow({ repoUrl, branch });
-  const stream = flowResult.stream;
+  const { stream } = generateDocumentationFlow({ repoUrl, branch });
 
   const webStream = new ReadableStream({
     async start(controller) {

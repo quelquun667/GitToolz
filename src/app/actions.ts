@@ -3,6 +3,7 @@
 import { generateDocumentation } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { z } from 'zod';
+import { experimental_streamText } from 'ai';
 
 const formSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
@@ -40,9 +41,13 @@ export async function generateDocsAction(
 
   try {
     const { repoUrl, branch } = validatedFields.data;
-    const { documentation } = await generateDocumentation({ repoUrl, branch });
+    const {stream, response} = generateDocumentation({ repoUrl, branch });
+    
+    // We can show the stream to the user in the UI, but for the final
+    // state, we need to await the final result.
+    const finalResponse = await response;
 
-    if (!documentation) {
+    if (!finalResponse || !finalResponse.documentation) {
       return {
         documentation: null,
         summary: null,
@@ -50,6 +55,8 @@ export async function generateDocsAction(
         errors: { _form: ['Failed to generate documentation. The model returned an empty response.'] },
       };
     }
+    
+    const { documentation } = finalResponse;
 
     const { summary } = await summarizeDocumentation({ documentationContent: documentation });
     

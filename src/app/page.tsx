@@ -187,7 +187,7 @@ export default function Home() {
                     id={section.id} 
                     name="sections" 
                     value={section.value} 
-                    defaultChecked={!state.sections || state.sections.includes(section.value)}
+                    defaultChecked={state.sections === null ? true : state.sections.includes(section.value)}
                   />
                   <Label htmlFor={section.id} className="font-normal text-sm">
                     {section.label}

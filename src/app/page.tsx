@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const initialState: FormState = {
   documentation: null,
@@ -20,6 +21,15 @@ const initialState: FormState = {
   repoUrl: null,
   errors: null,
 };
+
+const SECTIONS = [
+  { id: 'toc', label: 'Table of Contents', value: 'Table of Contents' },
+  { id: 'overview', label: 'Project Overview', value: 'Project Overview' },
+  { id: 'features', label: 'Features', value: 'Features' },
+  { id: 'prerequisites', label: 'Prerequisites', value: 'Prerequisites' },
+  { id: 'installation', label: 'Installation', value: 'Installation' },
+  { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
+];
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -80,6 +90,7 @@ export default function Home() {
       const errorMessages = [
         ...(state.errors.repoUrl || []),
         ...(state.errors.branch || []),
+        ...(state.errors.sections || []),
         ...(state.errors._form || []),
       ];
       if (errorMessages.length > 0) {
@@ -121,37 +132,60 @@ export default function Home() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
-      <aside className="w-full md:w-[380px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6">
+      <aside className="w-full md:w-[380px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
         <header className="flex items-center gap-3 px-2">
           <FileCode2 className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">GitDocs</h1>
         </header>
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Détails du Dépôt</CardTitle>
-            <CardDescription>Entrez l'URL d'un dépôt public pour commencer.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={formAction} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="repoUrl" className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-primary" />
-                  URL du Dépôt
-                </Label>
-                <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required />
+        <form action={formAction} className="space-y-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle>Détails du Dépôt</CardTitle>
+              <CardDescription>Entrez l'URL d'un dépôt public pour commencer.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="repoUrl" className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" />
+                    URL du Dépôt
+                  </Label>
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="branch" className="flex items-center gap-2">
+                    <GitBranch className="h-4 w-4 text-primary" />
+                    Branche / Tag
+                  </Label>
+                  <Input id="branch" name="branch" placeholder="main" required />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="branch" className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-primary" />
-                  Branche / Tag
-                </Label>
-                <Input id="branch" name="branch" placeholder="main" required />
-              </div>
-              <SubmitButton />
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Options
+              </CardTitle>
+              <CardDescription>Sélectionnez les sections à inclure.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {SECTIONS.map((section) => (
+                <div key={section.id} className="flex items-center space-x-2">
+                  <Checkbox id={section.id} name="sections" value={section.value} defaultChecked />
+                  <Label htmlFor={section.id} className="font-normal text-sm">
+                    {section.label}
+                  </Label>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          
+          <SubmitButton />
+        </form>
 
         {state.summary && !isGenerating && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
@@ -244,7 +278,7 @@ export default function Home() {
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h2: ({node, ...props}) => {
-                        const id = typeof props.children === 'string' ? slugify(props.children) : '';
+                        const id = typeof props.children === 'string' ? slugify(props.children[0]) : '';
                         return <h2 id={id} {...props} />;
                       },
                     }}

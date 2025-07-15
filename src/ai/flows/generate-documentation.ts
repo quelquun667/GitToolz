@@ -14,6 +14,7 @@ import {z} from 'genkit';
 const GenerateDocumentationInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
   branch: z.string().describe('The branch or tag to generate documentation from.'),
+  sections: z.array(z.string()).describe('A list of sections to include in the documentation.'),
 });
 export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInputSchema>;
 
@@ -33,14 +34,20 @@ const generateDocumentationPrompt = ai.definePrompt({
   
   The documentation MUST be structured like a professional README.md file.
 
-  It MUST begin with a "## Table of Contents" section. This section should list the main sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
+  It MUST only contain the following sections, in the order provided:
+  {{#each sections}}
+  - {{this}}
+  {{/each}}
 
-  After the table of contents, include the following sections:
-  - **Project Overview**: A brief introduction to the project.
-  - **Features**: A bulleted list of key features.
-  - **Prerequisites**: What users need to have installed to run the project (e.g., Node.js, Python).
-  - **Installation**: A step-by-step guide on how to install project dependencies.
-  - **Usage / Getting Started**: Clear instructions and code examples on how to run the project.
+  If 'Table of Contents' is requested, it MUST be the first section. The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
+  
+  For each requested section, generate appropriate and comprehensive content based on the repository.
+  
+  - For **Project Overview**: Provide a brief introduction to the project.
+  - For **Features**: Create a bulleted list of key features.
+  - For **Prerequisites**: List what users need to have installed to run the project (e.g., Node.js, Python).
+  - For **Installation**: Give a step-by-step guide on how to install project dependencies.
+  - For **Usage / Getting Started**: Provide clear instructions and code examples on how to run the project.
   
   Use clear and concise language. Format code blocks appropriately for markdown.
   Organize the documentation into logical sections with clear headings (e.g., '## Overview').

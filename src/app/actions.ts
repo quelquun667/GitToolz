@@ -1,6 +1,6 @@
 'use server';
 
-import { generateDocumentation } from '@/ai/flows/generate-documentation';
+import { generateDocumentationFlow } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { z } from 'zod';
 import { experimental_streamText } from 'ai';
@@ -41,11 +41,7 @@ export async function generateDocsAction(
 
   try {
     const { repoUrl, branch } = validatedFields.data;
-    const {stream, response} = generateDocumentation({ repoUrl, branch });
-    
-    // We can show the stream to the user in the UI, but for the final
-    // state, we need to await the final result.
-    const finalResponse = await response;
+    const finalResponse = await generateDocumentationFlow({ repoUrl, branch });
 
     if (!finalResponse || !finalResponse.documentation) {
       return {

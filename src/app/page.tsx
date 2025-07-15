@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
+import { generateDocumentationFlow } from '@/ai/flows/generate-documentation';
 
 const initialState: FormState = {
   documentation: null,
@@ -21,8 +22,34 @@ const initialState: FormState = {
   errors: null,
 };
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ setPending, setStatus }: { setPending: (pending: boolean) => void, setStatus: (status: string | null) => void }) {
+  const { pending, data } = useFormStatus();
+
+  useEffect(() => {
+    setPending(pending);
+    if (!pending) {
+      setStatus(null);
+    }
+  }, [pending, setPending, setStatus]);
+
+  useEffect(() => {
+    async function runStream() {
+      if (pending && data) {
+        const repoUrl = data.get('repoUrl') as string;
+        const branch = data.get('branch') as string;
+        if (repoUrl && branch) {
+          const { stream } = generateDocumentationFlow({ repoUrl, branch });
+          for await (const chunk of stream) {
+            if (chunk.status) {
+              setStatus(chunk.status);
+            }
+          }
+        }
+      }
+    }
+    runStream();
+  }, [pending, data, setStatus]);
+
   return (
     <Button type="submit" className="w-full" disabled={pending}>
       {pending ? (
@@ -44,6 +71,8 @@ export default function Home() {
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.errors) {
@@ -85,8 +114,6 @@ export default function Home() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
-  
-  const { pending } = useFormStatus();
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
@@ -117,7 +144,7 @@ export default function Home() {
                 </Label>
                 <Input id="branch" name="branch" placeholder="main" required />
               </div>
-              <SubmitButton />
+              <SubmitButton setPending={setPending} setStatus={setStatus} />
             </form>
           </CardContent>
         </Card>
@@ -145,7 +172,7 @@ export default function Home() {
               <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
               <h3 className="mt-4 text-lg font-medium">Génération en cours...</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {state.status || 'Initialisation...'}
+                {status || 'Initialisation...'}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useActionState } from 'react';
+import { useEffect, useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 
 const initialState: FormState = {
   documentation: null,
@@ -41,6 +42,7 @@ function SubmitButton() {
 export default function Home() {
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { toast } = useToast();
+  const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
 
   useEffect(() => {
     if (state.errors) {
@@ -72,7 +74,7 @@ export default function Home() {
   const handleDownload = () => {
     if (!state.documentation) return;
 
-    const blob = new Blob([state.documentation], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([state.documentation], { type: 'text/markdown;charset=utf-t' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -141,24 +143,41 @@ export default function Home() {
                 <CardTitle>Aperçu de la Documentation</CardTitle>
                 <CardDescription>Ceci est la documentation générée pour votre projet.</CardDescription>
               </div>
-              <div className="flex gap-2">
-                <Button onClick={handleCopy} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copier le Markdown
-                </Button>
-                <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                  <Download className="mr-2 h-4 w-4" />
-                  Télécharger
-                </Button>
+              <div className="flex items-center gap-4">
+                 <div className="flex items-center space-x-2">
+                  <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
+                  <Switch
+                    id="view-mode"
+                    checked={viewMode === 'preview'}
+                    onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
+                  />
+                  <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Aperçu</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleCopy} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copier le Markdown
+                  </Button>
+                  <Button onClick={handleDownload} variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                    <Download className="mr-2 h-4 w-4" />
+                    Télécharger
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <Separator />
             <CardContent className="flex-1 pt-6 overflow-auto">
-              <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-card p-6 ring-1 ring-border">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {state.documentation}
-                </ReactMarkdown>
-              </div>
+              {viewMode === 'preview' ? (
+                <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-card p-6 ring-1 ring-border">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {state.documentation}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <pre className="text-sm whitespace-pre-wrap break-words h-full w-full overflow-auto rounded-lg bg-card p-6 ring-1 ring-border">
+                  <code>{state.documentation}</code>
+                </pre>
+              )}
             </CardContent>
           </Card>
         ) : (

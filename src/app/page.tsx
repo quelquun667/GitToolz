@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -91,6 +91,7 @@ const extractRepoName = (url: string | null) => {
 
 
 export default function Home() {
+  const [isPending, startTransition] = useTransition();
   const [state, formAction] = useActionState(generateDocsAction, initialState);
   const { pending } = useFormStatus();
   const { toast } = useToast();
@@ -175,11 +176,14 @@ export default function Home() {
     setShowConfirmationDialog(false);
     if (formRef.current) {
       const formData = new FormData(formRef.current);
-      formAction(formData);
+      startTransition(() => {
+        formAction(formData);
+      });
     }
   };
   
   const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
+  const isGenerating = pending || isPending;
   
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
@@ -267,7 +271,7 @@ export default function Home() {
           <SubmitButton hasExistingDocs={!!state.documentation} />
         </form>
 
-        {state.summary && !pending && (
+        {state.summary && !isGenerating && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -282,7 +286,7 @@ export default function Home() {
           </Card>
         )}
         
-        {headings.length > 0 && !pending && (
+        {headings.length > 0 && !isGenerating && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -311,7 +315,7 @@ export default function Home() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        {pending ? (
+        {isGenerating ? (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
             <div className="text-center p-4">
               <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />

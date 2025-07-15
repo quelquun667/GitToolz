@@ -14,6 +14,8 @@ export type FormState = {
   documentation: string | null;
   summary: string | null;
   repoUrl: string | null;
+  branch: string | null;
+  sections: string[] | null;
   errors?: {
     repoUrl?: string[];
     branch?: string[];
@@ -36,7 +38,9 @@ export async function generateDocsAction(
     return {
       documentation: null,
       summary: null,
-      repoUrl: null,
+      repoUrl: formData.get('repoUrl') as string ?? null,
+      branch: formData.get('branch') as string ?? null,
+      sections: formData.getAll('sections') as string[] ?? null,
       errors: validatedFields.error.flatten().fieldErrors,
     };
   }
@@ -49,7 +53,9 @@ export async function generateDocsAction(
       return {
         documentation: null,
         summary: null,
-        repoUrl: null,
+        repoUrl,
+        branch,
+        sections,
         errors: { _form: ['Failed to generate documentation. The model returned an empty response.'] },
       };
     }
@@ -58,13 +64,15 @@ export async function generateDocsAction(
 
     const { summary } = await summarizeDocumentation({ documentationContent: documentation });
     
-    return { documentation, summary, repoUrl, errors: null };
+    return { documentation, summary, repoUrl, branch, sections, errors: null };
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred.';
     return { 
       documentation: null, 
       summary: null,
-      repoUrl: null,
+      repoUrl: validatedFields.data.repoUrl,
+      branch: validatedFields.data.branch,
+      sections: validatedFields.data.sections,
       errors: { _form: [error] } 
     };
   }

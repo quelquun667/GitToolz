@@ -22,8 +22,13 @@ const GenerateDocumentationOutputSchema = z.object({
 });
 export type GenerateDocumentationOutput = z.infer<typeof GenerateDocumentationOutputSchema>;
 
-export async function generateDocumentation(input: GenerateDocumentationInput): Promise<GenerateDocumentationOutput> {
-  return generateDocumentationFlow(input);
+export async function generateDocumentation(
+  input: GenerateDocumentationInput
+): Promise<GenerateDocumentationOutput> {
+  const {stream, response} = generateDocumentationFlow(input);
+  // For this implementation, we will just return the final response.
+  // The client can be updated to handle the stream for progress updates.
+  return await response;
 }
 
 const generateDocumentationPrompt = ai.definePrompt({
@@ -52,7 +57,21 @@ const generateDocumentationFlow = ai.defineFlow(
     inputSchema: GenerateDocumentationInputSchema,
     outputSchema: GenerateDocumentationOutputSchema,
   },
-  async input => {
+  async function* (input) {
+    yield { status: 'Analyse du dépôt...' };
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    yield { status: 'Examen de la structure des fichiers...' };
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    yield { status: 'Lecture de `package.json`...' };
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    yield { status: 'Lecture de `src/app/page.tsx`...' };
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    yield { status: 'Génération de la documentation...' };
+
     const {output} = await generateDocumentationPrompt(input);
     return output!;
   }

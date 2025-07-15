@@ -314,7 +314,9 @@ export default function Home() {
                     name="sections" 
                     value={section.value} 
                     checked={selectedSections.includes(section.value)}
-                    onCheckedChange={(checked) => handleSectionChange(section.value, checked as boolean)}
+                    onCheckedChange={(checked) => {
+                      handleSectionChange(section.value, checked as boolean)
+                    }}
                   />
                   <Label htmlFor={section.id} className="font-normal text-sm">
                     {section.label}

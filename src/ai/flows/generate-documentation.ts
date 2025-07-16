@@ -10,11 +10,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { getRepoTree } from '@/services/github';
 
 const GenerateDocumentationInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
   branch: z.string().describe('The branch or tag to generate documentation from.'),
   sections: z.array(z.string()).describe('A list of sections to include in the documentation.'),
+  fileTree: z.string().optional().describe('The file tree of the repository, if fetched.')
 });
 export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInputSchema>;
 
@@ -31,8 +33,13 @@ const generateDocumentationPrompt = ai.definePrompt({
   output: {schema: z.object({ documentation: z.string() }) },
   prompt: `You are an AI assistant that generates a high-quality README.md file for a Git repository.
 
-  Given the repository URL: {{{repoUrl}}} and branch/tag: {{{branch}}}, generate comprehensive documentation in Markdown format.
+  Given the repository URL: {{{repoUrl}}}, branch/tag: {{{branch}}}, and the repository's file tree, generate comprehensive documentation in Markdown format.
   
+  Repository File Tree:
+  \`\`\`
+  {{{fileTree}}}
+  \`\`\`
+
   The documentation MUST be structured like a professional README.md file.
 
   It MUST only contain the following sections, in the order provided:
@@ -42,11 +49,11 @@ const generateDocumentationPrompt = ai.definePrompt({
 
   If 'Table of Contents' is requested, it MUST be the first section. The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
   
-  For each requested section, generate appropriate and comprehensive content based on the repository.
+  For each requested section, generate appropriate and comprehensive content based on the repository's file tree and purpose.
   
   - For **Project Overview**: Provide a brief introduction to the project.
   - For **Features**: Create a bulleted list of key features.
-  - For **Prerequisites**: List what users need to have installed to run the project (e.g., Node.js, Python).
+  - For **Prerequisites**: List what users need to have installed to run the project (e.g., Node.js, Python). Look for files like 'package.json' or 'requirements.txt' to inform this.
   - For **Installation**: Give a step-by-step guide on how to install project dependencies.
   - For **Usage / Getting Started**: Provide clear instructions and code examples on how to run the project.
   
@@ -61,10 +68,14 @@ export async function* generateDocumentation(
   try {
     yield { status: 'Initializing documentation generation...' };
     yield { status: `Analyzing repository: ${input.repoUrl}` };
-    yield { status: `Using branch/tag: ${input.branch}` };
     
+    yield { status: 'Fetching file tree from GitHub...' };
+    const tree = await getRepoTree(input.repoUrl, input.branch);
+    const fileTree = tree.map(file => file.path).join('\n');
+    yield { status: 'File tree fetched successfully.' };
+
     yield { status: 'Generating content with AI...' };
-    const { output } = await generateDocumentationPrompt(input);
+    const { output } = await generateDocumentationPrompt({...input, fileTree});
     
     if (!output?.documentation) {
       throw new Error('AI failed to generate documentation content.');

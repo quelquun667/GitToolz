@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamDocsAction, summarizeAction } from '@/app/actions';
+import { summarizeAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,7 +176,7 @@ export default function Home() {
         const chunk = decoder.decode(value, { stream: true });
         
         // SSE messages are separated by \n\n. A single chunk can have multiple messages.
-        const messages = chunk.split('\n\n');
+        const messages = chunk.split('\n\n').filter(Boolean);
 
         for (const message of messages) {
             if (message.startsWith('data: ')) {
@@ -436,5 +436,3 @@ export default function Home() {
     </div>
   );
 }
-
-    

@@ -1,16 +1,15 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { generateDocsAction, type FormState } from '@/app/actions';
+import { streamDocsAction, summarizeAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,15 +26,6 @@ import {
 } from "@/components/ui/alert-dialog";
 
 
-const initialState: FormState = {
-  documentation: null,
-  summary: null,
-  repoUrl: null,
-  branch: null,
-  sections: null,
-  errors: null,
-};
-
 const SECTIONS = [
   { id: 'toc', label: 'Table of Contents', value: 'Table of Contents' },
   { id: 'overview', label: 'Project Overview', value: 'Project Overview' },
@@ -45,15 +35,13 @@ const SECTIONS = [
   { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
 ];
 
-function SubmitButton({ hasExistingDocs }: { hasExistingDocs: boolean }) {
-  const { pending } = useFormStatus();
-
+function SubmitButton({ isGenerating, hasExistingDocs }: { isGenerating: boolean, hasExistingDocs: boolean }) {
   const buttonText = hasExistingDocs ? 'Regenerate Documentation' : 'Generate Documentation';
   const Icon = hasExistingDocs ? RefreshCw : Sparkles;
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? (
+    <Button type="submit" className="w-full" disabled={isGenerating}>
+      {isGenerating ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Generating...
@@ -91,41 +79,24 @@ const extractRepoName = (url: string | null) => {
 
 
 export default function Home() {
-  const [isPending, startTransition] = useTransition();
-  const [state, formAction] = useActionState(generateDocsAction, initialState);
-  const { pending } = useFormStatus();
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
-  const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [branch, setBranch] = useState('');
   const [selectedSections, setSelectedSections] = useState<string[]>(SECTIONS.map(s => s.value));
+  
+  const [documentation, setDocumentation] = useState<string | null>(null);
+  const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationLog, setGenerationLog] = useState<string[]>([]);
+  
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if (state.errors) {
-      const errorMessages = [
-        ...(state.errors.repoUrl || []),
-        ...(state.errors.branch || []),
-        ...(state.errors.sections || []),
-        ...(state.errors._form || []),
-      ];
-      if (errorMessages.length > 0) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: errorMessages.join('\n'),
-        });
-      }
-    }
-  }, [state.errors, toast]);
-
-  useEffect(() => {
-    setEditedDocumentation(state.documentation);
-    if (state.sections) {
-      setSelectedSections(state.sections);
-    }
-  }, [state.documentation, state.sections]);
+    setEditedDocumentation(documentation);
+  }, [documentation]);
   
   const headings = useMemo(() => {
     if (!editedDocumentation) return [];
@@ -165,25 +136,80 @@ export default function Home() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (state.documentation) {
+    if (documentation) {
       setShowConfirmationDialog(true);
     } else {
-      handleConfirmRegenerate();
+      startGeneration();
     }
   };
 
-  const handleConfirmRegenerate = () => {
+  const startGeneration = async () => {
     setShowConfirmationDialog(false);
-    if (formRef.current) {
-      const formData = new FormData(formRef.current);
-      startTransition(() => {
-        formAction(formData);
+    if (!formRef.current?.checkValidity()) {
+        formRef.current?.reportValidity();
+        return;
+    }
+    
+    setIsGenerating(true);
+    setDocumentation(null);
+    setSummary(null);
+    setGenerationLog([]);
+
+    try {
+      const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoUrl, branch, sections: selectedSections }),
       });
+
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: true });
+        
+        const lines = chunk.split('data: ').filter(Boolean);
+
+        for (const line of lines) {
+            try {
+                const parsed = JSON.parse(line);
+                if (parsed.status) {
+                    setGenerationLog(prev => [...prev, parsed.status]);
+                }
+                if (parsed.documentation) {
+                    setDocumentation(parsed.documentation);
+                    const { summary } = await summarizeAction(parsed.documentation);
+                    setSummary(summary);
+                }
+                if (parsed.error) {
+                    throw new Error(parsed.error);
+                }
+            } catch (e) {
+                // Ignore empty or malformed JSON chunks
+            }
+        }
+      }
+    } catch (e) {
+      const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+      toast({
+        variant: 'destructive',
+        title: 'Generation Failed',
+        description: error,
+      });
+    } finally {
+      setIsGenerating(false);
     }
   };
-  
-  const repoName = useMemo(() => extractRepoName(state.repoUrl), [state.repoUrl]);
-  const isGenerating = pending || isPending;
+
+  const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
   
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background text-foreground">
@@ -197,7 +223,7 @@ export default function Home() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmRegenerate}>
+            <AlertDialogAction onClick={startGeneration}>
               Regenerate
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -227,14 +253,14 @@ export default function Home() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required defaultValue={state.repoUrl ?? ''}/>
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="branch" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branch / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required defaultValue={state.branch ?? ''}/>
+                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)}/>
                 </div>
               </div>
             </CardContent>
@@ -256,9 +282,7 @@ export default function Home() {
                     name="sections" 
                     value={section.value} 
                     checked={selectedSections.includes(section.value)}
-                    onCheckedChange={(checked) => {
-                      handleSectionChange(section.value, checked as boolean)
-                    }}
+                    onCheckedChange={(checked) => handleSectionChange(section.value, !!checked)}
                   />
                   <Label htmlFor={section.id} className="font-normal text-sm">
                     {section.label}
@@ -268,10 +292,10 @@ export default function Home() {
             </CardContent>
           </Card>
           
-          <SubmitButton hasExistingDocs={!!state.documentation} />
+          <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} />
         </form>
 
-        {state.summary && !isGenerating && (
+        {summary && !isGenerating && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -281,7 +305,7 @@ export default function Home() {
               <CardDescription>A summary of the generated documentation.</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow overflow-auto">
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{state.summary}</p>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{summary}</p>
             </CardContent>
           </Card>
         )}
@@ -317,12 +341,21 @@ export default function Home() {
       <main className="flex-1 flex flex-col p-4 md:pl-0">
         {isGenerating ? (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center p-4">
+            <div className="text-center p-4 max-w-md mx-auto">
               <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
               <h3 className="mt-4 text-lg font-medium">Generating...</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Please wait while the documentation is being created.
-              </p>
+              <Card className="mt-4 text-left bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-3">
+                    <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
+                    <div className="flex-1 space-y-1 text-sm text-muted-foreground">
+                      {generationLog.map((log, index) => (
+                        <p key={index}>{log}</p>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         ) : editedDocumentation !== null ? (

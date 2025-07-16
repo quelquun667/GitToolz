@@ -5,7 +5,7 @@
  *
  * - generateDocumentation - A function that generates documentation for a given repository URL and branch/tag.
  * - GenerateDocumentationInput - The input type for the generateDocumentation function.
- * - GenerateDocumentationOutput - The return type for the generateDocumentation function.
+ * - GenerateDocumentationOutput - The type for a chunk of the streaming output.
  */
 
 import {ai} from '@/ai/genkit';
@@ -19,14 +19,16 @@ const GenerateDocumentationInputSchema = z.object({
 export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInputSchema>;
 
 const GenerateDocumentationOutputSchema = z.object({
-  documentation: z.string().describe('The generated documentation for the repository.'),
+  status: z.string().optional().describe('The current status of the generation process.'),
+  documentation: z.string().optional().describe('The final generated documentation for the repository.'),
+  error: z.string().optional().describe('An error message if something went wrong.'),
 });
 export type GenerateDocumentationOutput = z.infer<typeof GenerateDocumentationOutputSchema>;
 
 const generateDocumentationPrompt = ai.definePrompt({
   name: 'generateDocumentationPrompt',
   input: {schema: GenerateDocumentationInputSchema},
-  output: {schema: GenerateDocumentationOutputSchema},
+  output: {schema: z.object({ documentation: z.string() }) },
   prompt: `You are an AI assistant that generates a high-quality README.md file for a Git repository.
 
   Given the repository URL: {{{repoUrl}}} and branch/tag: {{{branch}}}, generate comprehensive documentation in Markdown format.
@@ -53,23 +55,27 @@ const generateDocumentationPrompt = ai.definePrompt({
 `,
 });
 
-const generateDocumentationFlow = ai.defineFlow(
-  {
-    name: 'generateDocumentationFlow',
-    inputSchema: GenerateDocumentationInputSchema,
-    outputSchema: GenerateDocumentationOutputSchema,
-  },
-  async (input) => {
-    const {output} = await generateDocumentationPrompt(input);
-
-    if (!output) {
-      throw new Error('Failed to generate documentation.');
+export async function* generateDocumentation(
+  input: GenerateDocumentationInput
+): AsyncGenerator<GenerateDocumentationOutput> {
+  try {
+    yield { status: 'Initializing documentation generation...' };
+    yield { status: `Analyzing repository: ${input.repoUrl}` };
+    yield { status: `Using branch/tag: ${input.branch}` };
+    
+    yield { status: 'Generating content with AI...' };
+    const { output } = await generateDocumentationPrompt(input);
+    
+    if (!output?.documentation) {
+      throw new Error('AI failed to generate documentation content.');
     }
     
-    return output;
-  }
-);
+    yield { status: 'Finalizing documentation...' };
+    yield { documentation: output.documentation };
+    yield { status: 'Done.' };
 
-export async function generateDocumentation(input: GenerateDocumentationInput): Promise<GenerateDocumentationOutput> {
-  return generateDocumentationFlow(input);
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
+    yield { error };
+  }
 }

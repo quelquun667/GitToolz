@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,10 +26,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 
-const SECTIONS = [
-  { id: 'badges', label: 'GitHub Badges', value: 'GitHub Badges' },
+const DOC_SECTIONS = [
   { id: 'toc', label: 'Table of Contents', value: 'Table of Contents' },
   { id: 'overview', label: 'Project Overview', value: 'Project Overview' },
   { id: 'features', label: 'Features', value: 'Features' },
@@ -37,6 +38,14 @@ const SECTIONS = [
   { id: 'installation', label: 'Installation', value: 'Installation' },
   { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
 ];
+
+const BADGE_OPTIONS = [
+    { id: 'stars', label: 'Stars', value: 'Stars' },
+    { id: 'issues', label: 'Issues', value: 'Issues' },
+    { id: 'forks', label: 'Forks', value: 'Forks' },
+    { id: 'license', label: 'License', value: 'License' },
+];
+
 
 function SubmitButton({ isGenerating, hasExistingDocs }: { isGenerating: boolean, hasExistingDocs: boolean }) {
   const buttonText = hasExistingDocs ? 'Regenerate Documentation' : 'Generate Documentation';
@@ -85,8 +94,10 @@ export default function Home() {
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('');
-  const [selectedSections, setSelectedSections] = useState<string[]>(SECTIONS.map(s => s.value));
-  
+  const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
+  const [selectedBadges, setSelectedBadges] = useState<string[]>(BADGE_OPTIONS.map(s => s.value));
+  const [isBadgesOpen, setIsBadgesOpen] = useState(true);
+
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -138,6 +149,12 @@ export default function Home() {
     );
   };
 
+  const handleBadgeChange = (badgeValue: string, checked: boolean) => {
+    setSelectedBadges(prev =>
+      checked ? [...prev, badgeValue] : prev.filter(b => b !== badgeValue)
+    );
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (documentation) {
@@ -164,7 +181,7 @@ export default function Home() {
       const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl, branch, sections: selectedSections }),
+          body: JSON.stringify({ repoUrl, branch, sections: selectedSections, badges: selectedBadges }),
       });
 
       if (!response.body) {
@@ -294,7 +311,43 @@ export default function Home() {
               <CardDescription>Select the sections to include.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {SECTIONS.map((section) => (
+              <Collapsible open={isBadgesOpen} onOpenChange={setIsBadgesOpen}>
+                  <div className="flex items-center space-x-2">
+                      <Checkbox
+                          id="badges"
+                          checked={selectedBadges.length > 0}
+                          onCheckedChange={(checked) => {
+                              setSelectedBadges(checked ? BADGE_OPTIONS.map(b => b.value) : []);
+                          }}
+                      />
+                      <CollapsibleTrigger asChild>
+                          <div className="flex flex-1 items-center justify-between cursor-pointer">
+                              <Label htmlFor="badges" className="font-medium flex items-center gap-2">
+                                  <Badge className="h-4 w-4"/>
+                                  GitHub Badges
+                              </Label>
+                              <ChevronDown className={cn("h-4 w-4 transition-transform", isBadgesOpen && "rotate-180")} />
+                          </div>
+                      </CollapsibleTrigger>
+                  </div>
+                  <CollapsibleContent className="pl-6 pt-2 space-y-2">
+                      {BADGE_OPTIONS.map((badge) => (
+                          <div key={badge.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                  id={badge.id}
+                                  value={badge.value}
+                                  checked={selectedBadges.includes(badge.value)}
+                                  onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
+                              />
+                              <Label htmlFor={badge.id} className="font-normal text-sm">{badge.label}</Label>
+                          </div>
+                      ))}
+                  </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
+              {DOC_SECTIONS.map((section) => (
                 <div key={section.id} className="flex items-center space-x-2">
                   <Checkbox 
                     id={section.id} 

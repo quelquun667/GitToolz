@@ -16,6 +16,7 @@ const GenerateDocumentationInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
   branch: z.string().describe('The branch or tag to generate documentation from.'),
   sections: z.array(z.string()).describe('A list of sections to include in the documentation.'),
+  badges: z.array(z.string()).optional().describe('A list of specific GitHub badges to include.'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
 });
@@ -52,14 +53,23 @@ const generateDocumentationPrompt = ai.definePrompt({
 
   The documentation MUST be structured like a professional README.md file.
 
-  The generated documentation should be clean, professional, and ready to be used as a README.md file.
+  {{#if badges}}
+  The file MUST start with the following GitHub badges, in this exact order. Use the repository URL to construct the correct URLs for the badges. For a repo like 'https://github.com/user/repo', the path is 'user/repo'.
+  {{#each badges}}
+  - {{this}}
+  {{/each}}
+  
+  Example Badge Markdown:
+  - Stars: [![GitHub stars](https://img.shields.io/github/stars/user/repo)](https://github.com/user/repo/stargazers)
+  - Issues: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues)
+  - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
+  - License: [![GitHub license](https://img.shields.io/github/license/user/repo)](https://github.com/user/repo/blob/main/LICENSE)
+  {{/if}}
 
-  It MUST only contain the following sections, in the order provided:
+  After the badges (if any), the documentation MUST only contain the following sections, in the order provided:
   {{#each sections}}
   - {{this}}
   {{/each}}
-
-  If 'GitHub Badges' is requested, it MUST be the very first thing in the document. It should include markdown for shields.io badges for Stars and Issues, pointing to the provided repository URL. For example: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues).
 
   If 'Table of Contents' is requested, it MUST be the first section after the badges (if any). The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
   
@@ -90,6 +100,8 @@ const KEY_FILES_TO_READ = [
   'vite.config.js',
   'vite.config.ts',
   'README.md',
+  'LICENSE',
+  'contributing.md',
 ];
 
 
@@ -108,7 +120,7 @@ export async function* generateDocumentation(
     const fileContents: Record<string, string> = {};
     const filesToRead = tree
       .map(file => file.path)
-      .filter(path => KEY_FILES_TO_READ.some(keyFile => path.toLowerCase().endsWith(keyFile)));
+      .filter(path => KEY_FILES_TO_READ.some(keyFile => path.toLowerCase().endsWith(keyFile.toLowerCase())));
       
     for (const filePath of filesToRead) {
         yield { status: `Reading file: \`${filePath}\`...` };

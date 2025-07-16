@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, branch, sections } = await request.json();
+    const { repoUrl, branch, sections, badges } = await request.json();
 
     if (!repoUrl || !branch || !sections) {
       return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const stream = await streamDocsAction(repoUrl, branch, sections);
+    const stream = await streamDocsAction({ repoUrl, branch, sections, badges });
 
     return new Response(stream, {
       headers: {

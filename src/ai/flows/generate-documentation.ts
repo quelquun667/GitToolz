@@ -23,6 +23,7 @@ export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInp
 
 const GenerateDocumentationOutputSchema = z.object({
   status: z.string().optional().describe('The current status of the generation process.'),
+  fileTree: z.array(z.string()).optional().describe('The file tree of the repository.'),
   documentation: z.string().optional().describe('The final generated documentation for the repository.'),
   error: z.string().optional().describe('An error message if something went wrong.'),
 });
@@ -51,12 +52,16 @@ const generateDocumentationPrompt = ai.definePrompt({
 
   The documentation MUST be structured like a professional README.md file.
 
+  The generated documentation should be clean, professional, and ready to be used as a README.md file.
+
   It MUST only contain the following sections, in the order provided:
   {{#each sections}}
   - {{this}}
   {{/each}}
 
-  If 'Table of Contents' is requested, it MUST be the first section. The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
+  If 'GitHub Badges' is requested, it MUST be the very first thing in the document. It should include markdown for shields.io badges for Stars and Issues, pointing to the provided repository URL. For example: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues).
+
+  If 'Table of Contents' is requested, it MUST be the first section after the badges (if any). The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
   
   For each requested section, generate appropriate and comprehensive content based on the repository's file tree and the content of the key files provided.
   
@@ -97,8 +102,8 @@ export async function* generateDocumentation(
     
     yield { status: 'Fetching file tree from GitHub...' };
     const tree = await getRepoTree(input.repoUrl, input.branch);
-    const fileTree = tree.map(file => file.path).join('\n');
-    yield { status: 'File tree fetched successfully.' };
+    const filePaths = tree.map(file => file.path);
+    yield { status: 'File tree fetched successfully.', fileTree: filePaths };
 
     const fileContents: Record<string, string> = {};
     const filesToRead = tree
@@ -118,7 +123,8 @@ export async function* generateDocumentation(
     }
 
     yield { status: 'Generating content with AI...' };
-    const { output } = await generateDocumentationPrompt({...input, fileTree, fileContents});
+    const fileTreeString = filePaths.join('\n');
+    const { output } = await generateDocumentationPrompt({...input, fileTree: fileTreeString, fileContents});
     
     if (!output?.documentation) {
       throw new Error('AI failed to generate documentation content.');

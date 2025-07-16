@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, FileCode2, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,9 +24,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const SECTIONS = [
+  { id: 'badges', label: 'GitHub Badges', value: 'GitHub Badges' },
   { id: 'toc', label: 'Table of Contents', value: 'Table of Contents' },
   { id: 'overview', label: 'Project Overview', value: 'Project Overview' },
   { id: 'features', label: 'Features', value: 'Features' },
@@ -89,6 +92,7 @@ export default function Home() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
+  const [fileTree, setFileTree] = useState<string[]>([]);
   
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   
@@ -154,6 +158,7 @@ export default function Home() {
     setDocumentation(null);
     setSummary(null);
     setGenerationLog([]);
+    setFileTree([]);
 
     try {
       const response = await fetch('/api/generate', {
@@ -169,38 +174,45 @@ export default function Home() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
+      let buffer = '';
 
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
         const chunk = decoder.decode(value, { stream: true });
-        
-        // SSE messages are separated by \n\n. A single chunk can have multiple messages.
-        const messages = chunk.split('\n\n').filter(Boolean);
+        buffer += chunk;
 
-        for (const message of messages) {
-            if (message.startsWith('data: ')) {
-                const data = message.substring(6);
-                if (data.trim() === '[DONE]') {
-                    continue;
-                }
-                try {
-                    const parsed = JSON.parse(data);
-                    if (parsed.status) {
-                        setGenerationLog(prev => [...prev, parsed.status]);
-                    }
-                    if (parsed.documentation) {
-                        setDocumentation(parsed.documentation);
-                        const { summary } = await summarizeAction(parsed.documentation);
-                        setSummary(summary);
-                    }
-                    if (parsed.error) {
-                        throw new Error(parsed.error);
-                    }
-                } catch (e) {
-                    console.error("Failed to parse stream data chunk:", data, e);
-                }
+        const boundary = "\n\n";
+        let boundaryIndex;
+        while ((boundaryIndex = buffer.indexOf(boundary)) !== -1) {
+          const message = buffer.slice(0, boundaryIndex);
+          buffer = buffer.slice(boundaryIndex + boundary.length);
+
+          if (message.startsWith('data: ')) {
+            const data = message.substring(6);
+            if (data.trim() === '[DONE]') {
+                continue;
             }
+            try {
+                const parsed = JSON.parse(data);
+                if (parsed.status) {
+                    setGenerationLog(prev => [...prev, parsed.status]);
+                }
+                if (parsed.fileTree) {
+                    setFileTree(parsed.fileTree);
+                }
+                if (parsed.documentation) {
+                    setDocumentation(parsed.documentation);
+                    const { summary } = await summarizeAction(parsed.documentation);
+                    setSummary(summary);
+                }
+                if (parsed.error) {
+                    throw new Error(parsed.error);
+                }
+            } catch (e) {
+                console.error("Failed to parse stream data chunk:", data, e);
+            }
+          }
         }
       }
     } catch (e) {
@@ -355,71 +367,100 @@ export default function Home() {
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-3">
                     <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
-                    <div className="flex-1 space-y-1 text-sm text-muted-foreground">
-                      {generationLog.map((log, index) => (
-                        <p key={index}>{log}</p>
-                      ))}
-                    </div>
+                    <ScrollArea className="h-32 w-full">
+                      <div className="flex-1 space-y-1 text-sm text-muted-foreground">
+                        {generationLog.map((log, index) => (
+                          <p key={index} dangerouslySetInnerHTML={{ __html: log }} />
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
         ) : editedDocumentation !== null ? (
-          <Card className="flex-1 flex flex-col shadow-lg">
-            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex-grow">
-                <CardTitle>Documentation for <span className="text-primary">{repoName}</span></CardTitle>
-                <CardDescription>This is the generated documentation for your project.</CardDescription>
-              </div>
-              <div className="flex items-center gap-4 flex-wrap">
-                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
-                  <Switch
-                    id="view-mode"
-                    checked={viewMode === 'preview'}
-                    onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
-                  />
-                  <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Preview</Label>
+           <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
+             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex-grow">
+                  <CardTitle>Documentation for <span className="text-primary">{repoName}</span></CardTitle>
+                  <CardDescription>This is the generated documentation for your project.</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
-                  </Button>
+              </CardHeader>
+              <Separator/>
+              <Tabs defaultValue="documentation" className="flex-1 flex flex-col overflow-hidden">
+                <div className='flex justify-between items-center p-4 border-b'>
+                  <TabsList>
+                      <TabsTrigger value="documentation">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Documentation
+                      </TabsTrigger>
+                      <TabsTrigger value="files">
+                        <Files className="mr-2 h-4 w-4" />
+                        Files Found ({fileTree.length})
+                      </TabsTrigger>
+                  </TabsList>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
+                      <Switch
+                        id="view-mode"
+                        checked={viewMode === 'preview'}
+                        onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
+                      />
+                      <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Preview</Label>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy
+                      </Button>
+                      <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <Separator />
-            <CardContent className="flex-1 pt-6 overflow-auto">
-              {viewMode === 'preview' ? (
-                <div className="prose prose-invert max-w-none h-full w-full overflow-auto break-words rounded-lg bg-card p-6 ring-1 ring-border">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h2: ({node, ...props}) => {
-                        const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
-                        const id = slugify(childText);
-                        return <h2 id={id} {...props} />;
-                      },
-                    }}
-                  >
-                    {editedDocumentation}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <Textarea
-                  value={editedDocumentation}
-                  onChange={(e) => setEditedDocumentation(e.target.value)}
-                  className="w-full"
-                  rows={1}
-                />
-              )}
-            </CardContent>
+                 <TabsContent value="documentation" className="flex-1 overflow-auto mt-0">
+                    <div className="p-6">
+                      {viewMode === 'preview' ? (
+                        <div className="prose prose-invert max-w-none break-words">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h2: ({node, ...props}) => {
+                                const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
+                                const id = slugify(childText);
+                                return <h2 id={id} {...props} />;
+                              },
+                            }}
+                          >
+                            {editedDocumentation}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <Textarea
+                          value={editedDocumentation}
+                          onChange={(e) => setEditedDocumentation(e.target.value)}
+                          className="w-full h-full min-h-full"
+                          rows={1}
+                        />
+                      )}
+                    </div>
+                </TabsContent>
+                <TabsContent value="files" className="flex-1 overflow-auto mt-0">
+                  <ScrollArea className="h-full">
+                    <div className="p-6 text-sm">
+                      <ul className="space-y-2">
+                        {fileTree.map((file, index) => (
+                          <li key={index} className="font-mono text-muted-foreground">{file}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
           </Card>
         ) : (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">

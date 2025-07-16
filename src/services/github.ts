@@ -88,3 +88,34 @@ export async function getRepoFileContent(repoUrl: string, branch: string, path: 
         return null; 
     }
 }
+
+export async function getRepoCommits(repoUrl: string, startRef: string, endRef: string): Promise<{sha: string, message: string, author: string | null}[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const { data } = await octokit.rest.repos.compareCommits({
+            owner,
+            repo,
+            base: startRef,
+            head: endRef,
+        });
+
+        if (data.commits) {
+            return data.commits.map(commit => ({
+                sha: commit.sha,
+                message: commit.commit.message,
+                author: commit.author?.login ?? 'Unknown',
+            }));
+        }
+
+        return [];
+    } catch(error: any) {
+        if (error.status === 404) {
+            throw new Error(`Could not find one or both of the specified tags/branches: "${startRef}" or "${endRef}".`);
+        }
+         if (error.status === 401) {
+            throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+        }
+        console.error('GitHub API Error:', error);
+        throw new Error('Failed to fetch commits from GitHub.');
+    }
+}

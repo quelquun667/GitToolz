@@ -1,6 +1,6 @@
 'use server';
 
-import { generateDocumentation } from '@/ai/flows/generate-documentation';
+import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { z } from 'zod';
 
@@ -8,6 +8,7 @@ const formSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
   branch: z.string().min(1, { message: 'Branch or tag is required.' }),
   sections: z.array(z.string()).min(1, { message: 'Please select at least one section.' }),
+  badges: z.array(z.string()).optional(),
 });
 
 export type FormState = {
@@ -34,11 +35,10 @@ export async function summarizeAction(documentation: string): Promise<{summary: 
 }
 
 export async function streamDocsAction(
-  repoUrl: string,
-  branch: string,
-  sections: string[]
+  input: Omit<GenerateDocumentationInput, 'fileTree' | 'fileContents'>
 ): Promise<ReadableStream> {
-  const validatedFields = formSchema.safeParse({ repoUrl, branch, sections });
+
+  const validatedFields = formSchema.safeParse(input);
   
   if (!validatedFields.success) {
     const errorStream = new ReadableStream({

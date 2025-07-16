@@ -175,24 +175,31 @@ export default function Home() {
         done = readerDone;
         const chunk = decoder.decode(value, { stream: true });
         
-        const lines = chunk.split('data: ').filter(Boolean);
+        // SSE messages are separated by \n\n. A single chunk can have multiple messages.
+        const messages = chunk.split('\n\n');
 
-        for (const line of lines) {
-            try {
-                const parsed = JSON.parse(line);
-                if (parsed.status) {
-                    setGenerationLog(prev => [...prev, parsed.status]);
+        for (const message of messages) {
+            if (message.startsWith('data: ')) {
+                const data = message.substring(6);
+                if (data.trim() === '[DONE]') {
+                    continue;
                 }
-                if (parsed.documentation) {
-                    setDocumentation(parsed.documentation);
-                    const { summary } = await summarizeAction(parsed.documentation);
-                    setSummary(summary);
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.status) {
+                        setGenerationLog(prev => [...prev, parsed.status]);
+                    }
+                    if (parsed.documentation) {
+                        setDocumentation(parsed.documentation);
+                        const { summary } = await summarizeAction(parsed.documentation);
+                        setSummary(summary);
+                    }
+                    if (parsed.error) {
+                        throw new Error(parsed.error);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse stream data chunk:", data, e);
                 }
-                if (parsed.error) {
-                    throw new Error(parsed.error);
-                }
-            } catch (e) {
-                // Ignore empty or malformed JSON chunks
             }
         }
       }
@@ -244,7 +251,7 @@ export default function Home() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Repository Details</CardTitle>
-              <CardDescription>Enter a public repository URL to start.</CardDescription>
+              <CardDescription>Enter a public GitHub repository URL to start.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -429,3 +436,5 @@ export default function Home() {
     </div>
   );
 }
+
+    

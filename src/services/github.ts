@@ -60,3 +60,31 @@ export async function getRepoTree(repoUrl: string, branch: string): Promise<{ pa
         throw new Error('Failed to fetch repository tree from GitHub.');
     }
 }
+
+export async function getRepoFileContent(repoUrl: string, branch: string, path: string): Promise<string | null> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const { data } = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path,
+            ref: branch,
+            mediaType: {
+                format: "raw",
+            },
+        });
+        
+        // The 'raw' media type returns the content directly as a string for text files.
+        // For other types it might be an object, so we check if it's a string.
+        if (typeof data === 'string') {
+            return data;
+        }
+        return null;
+
+    } catch (error) {
+        console.error(`Failed to fetch content for file ${path}:`, error);
+        // We return null instead of throwing an error so the whole process doesn't fail
+        // if one file is unreadable.
+        return null; 
+    }
+}

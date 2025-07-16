@@ -24,48 +24,43 @@ export type FormState = {
   } | null;
 };
 
-export async function generateDocsAction(
-  prevState: FormState,
-  formData: FormData
-): Promise<FormState> {
-  const validatedFields = formSchema.safeParse({
-    repoUrl: formData.get('repoUrl'),
-    branch: formData.get('branch'),
-    sections: formData.getAll('sections'),
+export async function summarizeAction(documentation: string): Promise<{summary: string}> {
+  try {
+    const { summary } = await summarizeDocumentation({ documentationContent: documentation });
+    return { summary };
+  } catch(e) {
+     return { summary: "Could not generate summary." };
+  }
+}
+
+export async function streamDocsAction(
+  repoUrl: string,
+  branch: string,
+  sections: string[]
+): Promise<ReadableStream> {
+  const validatedFields = formSchema.safeParse({ repoUrl, branch, sections });
+  
+  if (!validatedFields.success) {
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(JSON.stringify({ error: "Invalid input." }));
+        controller.close();
+      }
+    });
+    return errorStream;
+  }
+
+  const docStream = generateDocumentation(validatedFields.data);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of docStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
   });
 
-  if (!validatedFields.success) {
-    return {
-      documentation: null,
-      summary: null,
-      repoUrl: formData.get('repoUrl') as string ?? null,
-      branch: formData.get('branch') as string ?? null,
-      sections: formData.getAll('sections') as string[] ?? null,
-      errors: validatedFields.error.flatten().fieldErrors,
-    };
-  }
-  
-  const { repoUrl, branch, sections } = validatedFields.data;
-
-  try {
-    const { documentation } = await generateDocumentation({ repoUrl, branch, sections });
-    const { summary } = await summarizeDocumentation({ documentationContent: documentation });
-
-    return {
-      documentation,
-      summary,
-      repoUrl,
-      branch,
-      sections,
-      errors: null,
-    };
-  } catch (e) {
-    const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
-     return {
-      ...prevState, // Keep old state on error
-      errors: {
-        _form: [error],
-      }
-    };
-  }
+  return stream;
 }

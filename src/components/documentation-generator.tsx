@@ -119,13 +119,14 @@ const extractRepoName = (url: string | null) => {
   }
 };
 
+type DocumentationGeneratorProps = {
+  repoUrl: string;
+  branches: string[];
+};
 
-export default function DocumentationGenerator() {
+export default function DocumentationGenerator({ repoUrl, branches }: DocumentationGeneratorProps) {
   const { toast } = useToast();
-  const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('');
-  const [branches, setBranches] = useState<string[]>([]);
-  const [isFetchingBranches, setIsFetchingBranches] = useState(false);
   
   const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
   const [customInstructions, setCustomInstructions] = useState('');
@@ -140,10 +141,6 @@ export default function DocumentationGenerator() {
   const [linkedinProfile, setLinkedinProfile] = useState('');
   const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
 
-  const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
-  const [isUrlValidating, setIsUrlValidating] = useState(false);
-  const [isRepoValid, setIsRepoValid] = useState(false);
-
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -157,6 +154,19 @@ export default function DocumentationGenerator() {
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
+    // Set default branch when branches are loaded
+    if (branches.length > 0) {
+      if (branches.includes('main')) {
+        setBranch('main');
+      } else if (branches.includes('master')) {
+        setBranch('master');
+      } else {
+        setBranch(branches[0]);
+      }
+    }
+  }, [branches]);
+
+  useEffect(() => {
     setEditedDocumentation(documentation);
   }, [documentation]);
   
@@ -165,83 +175,6 @@ export default function DocumentationGenerator() {
     const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
     return headingLines.map(line => line.replace(/^##\s/, ''));
   }, [editedDocumentation]);
-
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRepoUrl(e.target.value);
-    setIsRepoValid(false);
-    setBranches([]);
-    setBranch('');
-    setRepoUrlError(null);
-  }
-
-  const handleValidateRepo = async () => {
-    setIsRepoValid(false);
-    setRepoUrlError(null);
-    setBranches([]);
-    setBranch('');
-    
-    if (!repoUrl) {
-      setRepoUrlError('Repository URL is required.');
-      return;
-    }
-     try {
-        new URL(repoUrl);
-        if (!repoUrl.includes('github.com')) throw new Error();
-    } catch {
-        setRepoUrlError('Please enter a valid GitHub URL.');
-        return;
-    }
-    
-    setIsUrlValidating(true);
-    
-    try {
-      const response = await fetch('/api/validate-repo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
-      setRepoUrlError(null);
-      setIsRepoValid(true);
-      await fetchBranches();
-    } catch (e: any) {
-      setIsRepoValid(false);
-      setRepoUrlError(e.message || 'An unknown error occurred.');
-    } finally {
-      setIsUrlValidating(false);
-    }
-  };
-
-  const fetchBranches = async () => {
-    setIsFetchingBranches(true);
-    try {
-      const response = await fetch('/api/fetch-branches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const result = await response.json();
-      if (result.error || !response.ok) {
-        throw new Error(result.error || 'Failed to fetch branches');
-      }
-      setBranches(result.branches);
-      if (result.branches.includes('main')) {
-        setBranch('main');
-      } else if (result.branches.includes('master')) {
-        setBranch('master');
-      } else if (result.branches.length > 0) {
-        setBranch(result.branches[0]);
-      }
-    } catch(e) {
-       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
-       toast({ variant: 'destructive', title: 'Could not fetch branches', description: error });
-    } finally {
-      setIsFetchingBranches(false);
-    }
-  }
 
   const handleCopy = () => {
     if (editedDocumentation === null) return;
@@ -312,8 +245,8 @@ export default function DocumentationGenerator() {
   const startGeneration = async () => {
     setShowConfirmationDialog(false);
 
-    if (repoUrlError || !branch) {
-      toast({ variant: 'destructive', title: 'Please fix the errors before generating.' });
+    if (!repoUrl || !branch) {
+      toast({ variant: 'destructive', title: 'Please select a branch before generating.' });
       return;
     }
     
@@ -407,7 +340,7 @@ export default function DocumentationGenerator() {
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
-  const isGenerateDisabled = !isRepoValid || !repoUrl || !branch || !!repoUrlError || isUrlValidating || isFetchingBranches;
+  const isGenerateDisabled = !repoUrl || !branch;
 
   const renderMainContent = () => {
     if (isGenerating) {
@@ -540,10 +473,7 @@ export default function DocumentationGenerator() {
             <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
             <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {!isRepoValid
-                ? "Enter a repository URL and check it to begin."
-                : "Configure your options and generate the documentation."
-              }
+              Configure your options and generate the documentation.
             </p>
           </div>
         </div>
@@ -578,185 +508,168 @@ export default function DocumentationGenerator() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Repository Details</CardTitle>
-              <CardDescription>Enter a public GitHub repository URL to start.</CardDescription>
+              <CardDescription>Select the branch you want to use.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="repoUrl" className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-primary" />
-                    Repository URL
-                  </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={handleUrlChange} />
-                  {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
-                </div>
-                <Button onClick={handleValidateRepo} type="button" className="w-full" disabled={isUrlValidating || !repoUrl}>
-                  {isUrlValidating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Checking...</> : <><Search className="mr-2 h-4 w-4" />Check Repository</>}
-                </Button>
-                {isRepoValid && (
-                  <div className="space-y-2">
-                    <Label htmlFor="branch" className="flex items-center gap-2">
-                      <GitBranch className="h-4 w-4 text-primary" />
-                      Branch / Tag
-                    </Label>
-                    <Select onValueChange={setBranch} value={branch} disabled={isFetchingBranches || branches.length === 0}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isFetchingBranches ? "Fetching branches..." : "Select a branch"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                  </div>
-                )}
+              <div className="space-y-2">
+                <Label htmlFor="branch" className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-primary" />
+                  Branch / Tag
+                </Label>
+                <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
+                    <SelectTrigger>
+                        <SelectValue placeholder={"Select a branch"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
           
-          {isRepoValid && (
-            <>
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Options
-                  </CardTitle>
-                  <CardDescription>Select the sections to include.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {DOC_SECTIONS.map((section) => (
-                    <div key={section.id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={section.id} 
-                        name="sections" 
-                        value={section.value} 
-                        checked={selectedSections.includes(section.value)}
-                        onCheckedChange={(checked) => handleSectionChange(section.value, !!checked)}
-                      />
-                      <Label htmlFor={section.id} className="font-normal text-sm">
-                        {section.label}
-                      </Label>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
-                        Custom Instructions
-                    </CardTitle>
-                    <CardDescription>Provide specific instructions for the AI.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Textarea
-                        id="customInstructions"
-                        name="customInstructions"
-                        placeholder="e.g., 'Generate the documentation in a formal tone.' or 'Focus on the installation for beginners.'"
-                        value={customInstructions}
-                        onChange={(e) => setCustomInstructions(e.target.value)}
-                        maxLength={MAX_INSTRUCTIONS_LENGTH}
-                        className="min-h-[100px]"
+          <>
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Options
+                </CardTitle>
+                <CardDescription>Select the sections to include.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {DOC_SECTIONS.map((section) => (
+                  <div key={section.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={section.id} 
+                      name="sections" 
+                      value={section.value} 
+                      checked={selectedSections.includes(section.value)}
+                      onCheckedChange={(checked) => handleSectionChange(section.value, !!checked)}
                     />
-                    <p className="text-xs text-muted-foreground text-right mt-2">
-                        {customInstructions.length} / {MAX_INSTRUCTIONS_LENGTH}
-                    </p>
-                </CardContent>
-              </Card>
-              
-              <Card className="shadow-lg">
-                <CardHeader>
-                  <CardTitle>Badges &amp; Visuals</CardTitle>
-                  <CardDescription>Configure and add badges to your documentation.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Dialog open={isBadgeDialogOpen} onOpenChange={setIsBadgeDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="secondary" className="w-full">
-                        <BadgeIcon className="mr-2 h-4 w-4"/>
-                        Configure Badges ({selectedBadges.length} selected)
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Configure Badges &amp; Visuals</DialogTitle>
-                        <DialogDescription>
-                          Select items to include, provide any required info, and choose their position.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="flex flex-col md:flex-row gap-6 py-4">
-                        <div className="w-full md:w-1/2 space-y-4">
-                          <h4 className="font-medium text-foreground">Position</h4>
-                          <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
-                              <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="top" id="pos-top"/>
-                                  <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
-                              </div>
-                                <div className="flex items-center space-x-2">
-                                  <RadioGroupItem value="bottom" id="pos-bottom"/>
-                                  <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
-                              </div>
-                          </RadioGroup>
-                           <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
-                            <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                            <p>Usernames, invite codes, and profile paths are not verified. Please ensure they are correct.</p>
-                          </div>
-                        </div>
-                        <Separator orientation='vertical' className="h-auto hidden md:block" />
-                        <Separator className="block md:hidden"/>
-                        <div className="w-full md:w-1/2">
-                           <h4 className="font-medium text-foreground">Available Items</h4>
-                           <p className="text-xs text-muted-foreground mb-4">Previews use an example repository. Yours will be generated dynamically.</p>
-                           <ScrollArea className="h-72">
-                             <div className="space-y-4 pr-4">
-                                {BADGE_OPTIONS.map((badge) => (
-                                  <div key={badge.id}>
-                                    <div className="flex items-center space-x-3">
-                                      <Checkbox
-                                        id={`badge-${badge.id}`}
-                                        value={badge.value}
-                                        checked={selectedBadges.includes(badge.value)}
-                                        onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
-                                      />
-                                      <Label htmlFor={`badge-${badge.id}`} className="font-normal text-sm flex-1 cursor-pointer">
-                                        <div className="flex items-center gap-2">
-                                          <badge.icon className="h-4 w-4 text-muted-foreground" />
-                                          {badge.label}
-                                        </div>
+                    <Label htmlFor={section.id} className="font-normal text-sm">
+                      {section.label}
+                    </Label>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
 
-                                      </Label>
-                                       <Image src={badge.previewUrl.replace('quelquun667/GitToolz', extractRepoName(repoUrl) || 'quelquun667/GitToolz')} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
-                                    </div>
-                                    {badge.inputLabel && selectedBadges.includes(badge.value) && (
-                                      <div className="relative pl-7 mt-2">
-                                        <Input
-                                            type={badge.inputType || 'text'}
-                                            placeholder={badge.placeholder}
-                                            required={selectedBadges.includes(badge.value)}
-                                            value={getBadgeInputValue(badge.id)}
-                                            onChange={e => setBadgeInputValue(badge.id, e.target.value)}
-                                            className="h-8"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                             </div>
-                           </ScrollArea>
+            <Card className="shadow-lg">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Custom Instructions
+                  </CardTitle>
+                  <CardDescription>Provide specific instructions for the AI.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <Textarea
+                      id="customInstructions"
+                      name="customInstructions"
+                      placeholder="e.g., 'Generate the documentation in a formal tone.' or 'Focus on the installation for beginners.'"
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      maxLength={MAX_INSTRUCTIONS_LENGTH}
+                      className="min-h-[100px]"
+                  />
+                  <p className="text-xs text-muted-foreground text-right mt-2">
+                      {customInstructions.length} / {MAX_INSTRUCTIONS_LENGTH}
+                  </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Badges &amp; Visuals</CardTitle>
+                <CardDescription>Configure and add badges to your documentation.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Dialog open={isBadgeDialogOpen} onOpenChange={setIsBadgeDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" className="w-full">
+                      <BadgeIcon className="mr-2 h-4 w-4"/>
+                      Configure Badges ({selectedBadges.length} selected)
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Configure Badges &amp; Visuals</DialogTitle>
+                      <DialogDescription>
+                        Select items to include, provide any required info, and choose their position.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col md:flex-row gap-6 py-4">
+                      <div className="w-full md:w-1/2 space-y-4">
+                        <h4 className="font-medium text-foreground">Position</h4>
+                        <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="top" id="pos-top"/>
+                                <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                            </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="bottom" id="pos-bottom"/>
+                                <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                            </div>
+                        </RadioGroup>
+                         <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
+                          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <p>Usernames, invite codes, and profile paths are not verified. Please ensure they are correct.</p>
                         </div>
                       </div>
-                      <DialogFooter>
-                        <Button onClick={() => setIsBadgeDialogOpen(false)}>Done</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </CardContent>
-              </Card>
-              
-              <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
-            </>
-          )}
+                      <Separator orientation='vertical' className="h-auto hidden md:block" />
+                      <Separator className="block md:hidden"/>
+                      <div className="w-full md:w-1/2">
+                         <h4 className="font-medium text-foreground">Available Items</h4>
+                         <p className="text-xs text-muted-foreground mb-4">Previews use an example repository. Yours will be generated dynamically.</p>
+                         <ScrollArea className="h-72">
+                           <div className="space-y-4 pr-4">
+                              {BADGE_OPTIONS.map((badge) => (
+                                <div key={badge.id}>
+                                  <div className="flex items-center space-x-3">
+                                    <Checkbox
+                                      id={`badge-${badge.id}`}
+                                      value={badge.value}
+                                      checked={selectedBadges.includes(badge.value)}
+                                      onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
+                                    />
+                                    <Label htmlFor={`badge-${badge.id}`} className="font-normal text-sm flex-1 cursor-pointer">
+                                      <div className="flex items-center gap-2">
+                                        <badge.icon className="h-4 w-4 text-muted-foreground" />
+                                        {badge.label}
+                                      </div>
+
+                                    </Label>
+                                     <Image src={badge.previewUrl.replace('quelquun667/GitToolz', extractRepoName(repoUrl) || 'quelquun667/GitToolz')} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
+                                  </div>
+                                  {badge.inputLabel && selectedBadges.includes(badge.value) && (
+                                    <div className="relative pl-7 mt-2">
+                                      <Input
+                                          type={badge.inputType || 'text'}
+                                          placeholder={badge.placeholder}
+                                          required={selectedBadges.includes(badge.value)}
+                                          value={getBadgeInputValue(badge.id)}
+                                          onChange={e => setBadgeInputValue(badge.id, e.target.value)}
+                                          className="h-8"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                           </div>
+                         </ScrollArea>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={() => setIsBadgeDialogOpen(false)}>Done</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+            
+            <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
+          </>
         </form>
 
         {summary && !isGenerating && !isFinalizing && (

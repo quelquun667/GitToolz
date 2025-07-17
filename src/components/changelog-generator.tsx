@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon, Search, ListChecks, GitBranch, CheckCircle2 } from 'lucide-react';
@@ -24,19 +23,19 @@ type Commit = {
   author: string | null;
 };
 
-export default function ChangelogGenerator() {
+type ChangelogGeneratorProps = {
+  repoUrl: string;
+  branches: string[];
+};
+
+export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGeneratorProps) {
   const { toast } = useToast();
 
   // Step 1: Form state
-  const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('');
-  const [branches, setBranches] = useState<string[]>([]);
-  const [isFetchingBranches, setIsFetchingBranches] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [isFetchingCommits, setIsFetchingCommits] = useState(false);
-  const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
-  const [isUrlValidating, setIsUrlValidating] = useState(false);
 
   // Step 2: Commit selection state
   const [allCommits, setAllCommits] = useState<Commit[]>([]);
@@ -50,83 +49,26 @@ export default function ChangelogGenerator() {
   
   const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
   const [displayEndDate, setDisplayEndDate] = useState<Date | undefined>();
-  
-  const handleUrlBlur = async () => {
-    setRepoUrlError(null);
-    setBranches([]);
-    setBranch('');
-    setAllCommits([]);
-    
-    if (!repoUrl) {
-      setRepoUrlError('Repository URL is required.');
-      return;
-    }
-     try {
-        new URL(repoUrl);
-        if (!repoUrl.includes('github.com')) throw new Error();
-    } catch {
-        setRepoUrlError('Please enter a valid GitHub URL.');
-        return;
-    }
 
-    setIsUrlValidating(true);
-    
-    try {
-      const response = await fetch('/api/validate-repo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const result = await response.json();
-      if (!response.ok) {
-        throw new Error(result.error);
-      }
-      setRepoUrlError(null);
-      await fetchBranches();
-    } catch (e: any) {
-      setRepoUrlError(e.message || 'An unknown error occurred.');
-    } finally {
-      setIsUrlValidating(false);
-    }
-  };
-  
-  const fetchBranches = async () => {
-    setIsFetchingBranches(true);
-    try {
-      const response = await fetch('/api/fetch-branches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const result = await response.json();
-      if (result.error || !response.ok) {
-        throw new Error(result.error || 'Failed to fetch branches');
-      }
-      setBranches(result.branches);
-      if (result.branches.includes('main')) {
+  useEffect(() => {
+    // Set default branch when branches are loaded
+    if (branches.length > 0) {
+      if (branches.includes('main')) {
         setBranch('main');
-      } else if (result.branches.includes('master')) {
+      } else if (branches.includes('master')) {
         setBranch('master');
-      } else if (result.branches.length > 0) {
-        setBranch(result.branches[0]);
+      } else {
+        setBranch(branches[0]);
       }
-    } catch(e) {
-       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
-       toast({ variant: 'destructive', title: 'Could not fetch branches', description: error });
-    } finally {
-      setIsFetchingBranches(false);
     }
-  }
-
+  }, [branches]);
 
   const handleFetchCommits = async () => {
-    if (repoUrlError) return;
-
     if (!repoUrl || !branch || !startDate || !endDate) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
-        description: 'Please provide all repository details and select a date range.',
+        description: 'Please select a branch and a date range.',
       });
       return;
     }
@@ -279,7 +221,7 @@ export default function ChangelogGenerator() {
   };
   
   const totalSelected = Object.values(selectedCommits).filter(Boolean).length;
-  const isFetchDisabled = !repoUrl || !branch || isFetchingCommits || !!repoUrlError || isUrlValidating || isFetchingBranches;
+  const isFetchDisabled = !repoUrl || !branch || isFetchingCommits;
 
   const renderMainContent = () => {
     if (isGenerating) {
@@ -362,20 +304,14 @@ export default function ChangelogGenerator() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>1. Repository Details</CardTitle>
-            <CardDescription>Enter a public GitHub repo and date range to find commits.</CardDescription>
+            <CardDescription>Select a branch and date range to find commits.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="repoUrl" className="flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />Repository URL</Label>
-              <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={handleUrlBlur} />
-               {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
-               {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="branch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch to Analyze</Label>
-              <Select onValueChange={setBranch} value={branch} disabled={isFetchingBranches || branches.length === 0}>
+              <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
                   <SelectTrigger className="w-full">
-                      <SelectValue placeholder={isFetchingBranches ? "Fetching branches..." : "Select a branch"} />
+                      <SelectValue placeholder={"Select a branch"} />
                   </SelectTrigger>
                   <SelectContent>
                       {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}

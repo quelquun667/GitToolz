@@ -86,3 +86,9 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+    .tabs-content {
+        @apply mt-0;
+    }
+}

@@ -17,6 +17,10 @@ const docFormSchema = z.object({
   discordInviteCode: z.string().optional(),
   linkedinProfile: z.string().optional(),
   customInstructions: z.string().max(500, { message: 'Instructions cannot exceed 500 characters.' }).optional(),
+  imageSource: z.enum(['none', 'url', 'repo']).optional(),
+  imageUrl: z.string().url({ message: 'Please enter a valid image URL.' }).optional().or(z.literal('')),
+  imagePath: z.string().optional(),
+  imagePosition: z.enum(['top', 'bottom']).optional(),
 });
 
 const fetchCommitsSchema = z.object({

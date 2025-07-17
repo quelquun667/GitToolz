@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2 } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -132,6 +132,12 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [customInstructions, setCustomInstructions] = useState('');
   const MAX_INSTRUCTIONS_LENGTH = 500;
   
+  // Image State
+  const [imageSource, setImageSource] = useState<'none' | 'url' | 'repo'>('none');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imagePath, setImagePath] = useState('');
+  const [imagePosition, setImagePosition] = useState<'top' | 'bottom'>('top');
+
   // Badge State
   const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
   const [badgePosition, setBadgePosition] = useState<'top' | 'bottom'>('top');
@@ -272,6 +278,10 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
             discordInviteCode,
             linkedinProfile,
             customInstructions,
+            imageSource,
+            imageUrl,
+            imagePath,
+            imagePosition,
           }),
       });
 
@@ -552,6 +562,60 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                     </Label>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  Project Image
+                </CardTitle>
+                <CardDescription>Add a logo or banner to the documentation.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <RadioGroup value={imageSource} onValueChange={(value) => setImageSource(value as 'none' | 'url' | 'repo')} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="none" id="img-none"/>
+                        <Label htmlFor="img-none" className="font-normal">None</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="url" id="img-url"/>
+                        <Label htmlFor="img-url" className="font-normal">From URL</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="repo" id="img-repo"/>
+                        <Label htmlFor="img-repo" className="font-normal">From Repository</Label>
+                    </div>
+                </RadioGroup>
+                
+                {imageSource === 'url' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="imageUrl">Image URL</Label>
+                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                  </div>
+                )}
+                {imageSource === 'repo' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="imagePath">Path in Repository</Label>
+                    <Input id="imagePath" value={imagePath} onChange={(e) => setImagePath(e.target.value)} placeholder="e.g., assets/banner.jpg" />
+                  </div>
+                )}
+                {imageSource !== 'none' && (
+                  <div className="space-y-2">
+                    <Label>Position</Label>
+                    <RadioGroup value={imagePosition} onValueChange={(value) => setImagePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="top" id="pos-top-img"/>
+                            <Label htmlFor="pos-top-img" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                        </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="bottom" id="pos-bottom-img"/>
+                            <Label htmlFor="pos-bottom-img" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                        </div>
+                    </RadioGroup>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

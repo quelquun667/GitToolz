@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
+import { getRepoTree } from '@/app/actions';
 import { summarizeAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -163,12 +164,13 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
   const [fileTree, setFileTree] = useState<string[]>([]);
+  const [isFetchingTree, setIsFetchingTree] = useState(false);
   
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
   
-  const isConfigurationDisabled = !branch;
+  const isConfigurationDisabled = !branch || isFetchingTree;
 
   useEffect(() => {
     // Set default branch when branches are loaded
@@ -188,12 +190,8 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   }, [documentation]);
   
   useEffect(() => {
-    if (fileTree.length > 0) {
-      const images = fileTree.filter(path => IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext)));
+      const images = fileTree.filter(path => IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext.toLowerCase())));
       setRepoImages(images);
-    } else {
-      setRepoImages([]);
-    }
   }, [fileTree]);
 
   useEffect(() => {
@@ -202,6 +200,28 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
       setImageSource('none');
     }
   }, [imageSource, repoImages]);
+
+  const handleBranchChange = async (newBranch: string) => {
+    setBranch(newBranch);
+    if (newBranch) {
+        setIsFetchingTree(true);
+        setFileTree([]);
+        try {
+            const result = await getRepoTree({ repoUrl, branch: newBranch });
+            if (result.error) {
+                throw new Error(result.error);
+            }
+            setFileTree(result.tree || []);
+        } catch (e) {
+            const error = e instanceof Error ? e.message : 'Failed to fetch repository file tree.';
+            toast({ variant: 'destructive', title: 'Error', description: error });
+        } finally {
+            setIsFetchingTree(false);
+        }
+    } else {
+        setFileTree([]);
+    }
+  };
 
 
   const headings = useMemo(() => {
@@ -289,7 +309,6 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     setEditedDocumentation(null);
     setSummary(null);
     setGenerationLog([]);
-    setFileTree([]);
 
     try {
       const response = await fetch('/api/generate', {
@@ -310,6 +329,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
             imageUrl,
             imagePath,
             imagePosition,
+            fileTree: fileTree.join('\n'),
           }),
       });
 
@@ -337,9 +357,6 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                 const parsed = JSON.parse(data);
                 if (parsed.status) {
                     setGenerationLog(prev => [...prev, parsed.status]);
-                }
-                if (parsed.fileTree) {
-                    setFileTree(parsed.fileTree);
                 }
                 if (parsed.documentation) {
                     setDocumentation(parsed.documentation);
@@ -378,7 +395,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
-  const isGenerateDisabled = !repoUrl || !branch;
+  const isGenerateDisabled = !repoUrl || !branch || isFetchingTree;
 
   const renderMainContent = () => {
     if (isGenerating) {
@@ -554,14 +571,17 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                   <GitBranch className="h-4 w-4 text-primary" />
                   Branch / Tag
                 </Label>
-                <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
-                    <SelectTrigger>
-                        <SelectValue placeholder={"Select a branch"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                    <Select onValueChange={handleBranchChange} value={branch} disabled={branches.length === 0 || isFetchingTree}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={"Select a branch"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    {isFetchingTree && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -622,7 +642,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                           {repoImages.length === 0 && (
                             <TooltipContent>
                               <p>No images found in repository.</p>
-                              <p className="text-xs text-muted-foreground">Generate docs first to scan files.</p>
+                              <p className="text-xs text-muted-foreground">Select a branch to scan for images.</p>
                             </TooltipContent>
                           )}
                         </Tooltip>

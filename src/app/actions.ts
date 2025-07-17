@@ -16,6 +16,7 @@ const docFormSchema = z.object({
   twitterUsername: z.string().optional(),
   discordInviteCode: z.string().optional(),
   linkedinProfile: z.string().optional(),
+  customInstructions: z.string().max(500, { message: 'Instructions cannot exceed 500 characters.' }).optional(),
 });
 
 const fetchCommitsSchema = z.object({

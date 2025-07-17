@@ -22,6 +22,7 @@ const GenerateDocumentationInputSchema = z.object({
   twitterUsername: z.string().optional().describe('The username for the Twitter badge.'),
   discordInviteCode: z.string().optional().describe('The invite code for the Discord server badge.'),
   linkedinProfile: z.string().optional().describe('The profile path for the LinkedIn badge (e.g., in/your-name).'),
+  customInstructions: z.string().optional().describe('Custom instructions to guide the AI in generating the documentation.'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
 });
@@ -62,9 +63,14 @@ const generateDocumentationPrompt = ai.definePrompt({
   {{#each sections}}
   - {{this}}
   {{/each}}
-
-  If 'Table of Contents' is requested, it MUST be the first section. The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
   
+  {{#if customInstructions}}
+  Please adhere to these specific additional instructions from the user:
+  <instructions>
+  {{{customInstructions}}}
+  </instructions>
+  {{/if}}
+
   For each requested section, generate appropriate and comprehensive content based on the repository's file tree and the content of the key files provided.
   - For **Project Overview**: Provide a brief introduction to the project.
   - For **Features**: Create a bulleted list of key features.

@@ -16,7 +16,7 @@ function parseRepoUrl(url: string): { owner: string; repo: string } {
   try {
     const parsedUrl = new URL(url);
     if (parsedUrl.hostname !== 'github.com') {
-      throw new Error('Not a GitHub URL');
+      throw new Error('Invalid GitHub URL: must be a github.com link.');
     }
     const pathParts = parsedUrl.pathname.split('/').filter(Boolean);
     if (pathParts.length < 2) {
@@ -32,7 +32,21 @@ function parseRepoUrl(url: string): { owner: string; repo: string } {
 export async function validateRepo(repoUrl: string, branch: string): Promise<void> {
   const { owner, repo } = parseRepoUrl(repoUrl);
   try {
-    // We fetch the branch. If it doesn't exist, it will throw a 404.
+    // First, check if the repository exists and is accessible
+    await octokit.rest.repos.get({ owner, repo });
+  } catch (error: any) {
+    if (error.status === 404) {
+      throw new Error('Repository not found. Please check the URL.');
+    }
+    if (error.status === 401) {
+      throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+    }
+    // For other errors (like 403 rate limit), throw a generic message
+    throw new Error('Failed to access repository. Check URL and token permissions.');
+  }
+
+  try {
+    // If the repo exists, check for the branch
     await octokit.rest.repos.getBranch({
       owner,
       repo,
@@ -40,12 +54,10 @@ export async function validateRepo(repoUrl: string, branch: string): Promise<voi
     });
   } catch (error: any) {
     if (error.status === 404) {
-      throw new Error(`Repository not found or branch "${branch}" does not exist.`);
+      throw new Error(`Branch "${branch}" does not exist in this repository.`);
     }
-    if (error.status === 401) {
-      throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-    }
-    throw new Error('Failed to validate repository on GitHub.');
+    // This could be another auth error if the repo is private and branch protection is on
+    throw new Error('Failed to validate branch. Check its name and permissions.');
   }
 }
 
@@ -137,5 +149,3 @@ export async function getRepoCommitsByDate(repoUrl: string, branch: string, star
         throw new Error('Failed to fetch commits from GitHub.');
     }
 }
-
-    

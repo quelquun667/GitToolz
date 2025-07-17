@@ -151,7 +151,7 @@ export default function ChangelogGenerator() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Repository Details</CardTitle>
-              <CardDescription>Enter a public GitHub repo and a commit range.</CardDescription>
+              <CardDescription>Enter a public GitHub repo and a range of commits (using tags, branches, or commit hashes).</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -165,16 +165,16 @@ export default function ChangelogGenerator() {
                  <div className="space-y-2">
                   <Label htmlFor="startRef" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
-                    Start Tag / Branch
+                    Start Ref (Tag, Branch, Commit)
                   </Label>
-                  <Input id="startRef" name="startRef" placeholder="v1.0.0" required value={startRef} onChange={e => setStartRef(e.target.value)}/>
+                  <Input id="startRef" name="startRef" placeholder="main or v1.0.0" required value={startRef} onChange={e => setStartRef(e.target.value)}/>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endRef" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
-                    End Tag / Branch
+                    End Ref (Tag, Branch, Commit)
                   </Label>
-                  <Input id="endRef" name="endRef" placeholder="v1.1.0" required value={endRef} onChange={e => setEndRef(e.target.value)}/>
+                  <Input id="endRef" name="endRef" placeholder="develop or v1.1.0" required value={endRef} onChange={e => setEndRef(e.target.value)}/>
                 </div>
               </div>
             </CardContent>

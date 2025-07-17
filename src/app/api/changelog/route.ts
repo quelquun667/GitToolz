@@ -3,16 +3,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, branch, startDate, endDate } = await request.json();
+    const { commitMessages } = await request.json();
 
-    if (!repoUrl || !branch || !startDate || !endDate) {
-      return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
+    if (!commitMessages || !Array.isArray(commitMessages)) {
+      return new NextResponse(JSON.stringify({ error: 'Missing required parameter: commitMessages' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const stream = await streamChangelogAction({ repoUrl, branch, startDate, endDate });
+    const stream = await streamChangelogAction({ commitMessages });
 
     return new Response(stream, {
       headers: {
@@ -30,5 +30,3 @@ export async function POST(request: Request) {
     });
   }
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -79,15 +80,15 @@ const generateDocumentationPrompt = ai.definePrompt({
   - For **Usage / Getting Started**: Provide clear instructions and code examples on how to run the project. Look for main scripts or entry points.
   
   {{#if badges}}
-  The document MUST include a section for GitHub badges. It should be placed at the {{badgePosition}} of the document.
+  The document MUST include a section for GitHub badges and visuals. It should be placed at the {{badgePosition}} of the document.
   Use the repository URL to construct the correct URLs for the badges. For a repo like 'https://github.com/user/repo', the path is 'user/repo'.
 
-  Generate markdown for the following requested badges, in this exact order:
+  Generate markdown for the following requested items, in this exact order:
   {{#each badges}}
   - {{this}}
   {{/each}}
   
-  Example Badge Markdown:
+  Example Badge/Visual Markdown:
   - Stars: [![GitHub stars](https://img.shields.io/github/stars/user/repo)](https://github.com/user/repo/stargazers)
   - Issues: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues)
   - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
@@ -98,6 +99,7 @@ const generateDocumentationPrompt = ai.definePrompt({
   - Twitter: [![Follow on X](https://img.shields.io/twitter/follow/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}}?style=social)](https://x.com/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}})
   - Discord: [![Discord](https://img.shields.io/discord/{{#if discordInviteCode}}{{discordInviteCode}}{{else}}your-invite-code{{/if}}?logo=discord&label=Discord)](https://discord.gg/{{#if discordInviteCode}}{{discordInviteCode}}{{else}}your-invite-code{{/if}})
   - LinkedIn: [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/{{#if linkedinProfile}}{{linkedinProfile}}{{else}}in/your-profile{{/if}})
+  - Star History Chart: [![Star History Chart](https://api.star-history.com/svg?repos=user/repo&type=Date)](https://star-history.com/#user/repo&Date)
   {{/if}}
 
   Use clear and concise language. Format code blocks appropriately for markdown.

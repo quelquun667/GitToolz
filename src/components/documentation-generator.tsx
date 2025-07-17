@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -148,6 +148,7 @@ export default function DocumentationGenerator() {
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
   const [fileTree, setFileTree] = useState<string[]>([]);
   
@@ -318,6 +319,7 @@ export default function DocumentationGenerator() {
     
     setIsGenerating(true);
     setDocumentation(null);
+    setEditedDocumentation(null);
     setSummary(null);
     setGenerationLog([]);
     setFileTree([]);
@@ -386,6 +388,11 @@ export default function DocumentationGenerator() {
       };
       
       await processStream();
+      setIsGenerating(false);
+      setIsFinalizing(true);
+      setTimeout(() => {
+        setIsFinalizing(false);
+      }, 1500);
 
     } catch (e) {
       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -394,7 +401,6 @@ export default function DocumentationGenerator() {
         title: 'Generation Failed',
         description: error,
       });
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -402,6 +408,147 @@ export default function DocumentationGenerator() {
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
   const isGenerateDisabled = !isRepoValid || !repoUrl || !branch || !!repoUrlError || isUrlValidating || isFetchingBranches;
+
+  const renderMainContent = () => {
+    if (isGenerating) {
+      return (
+        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+          <div className="text-center p-4 max-w-md mx-auto">
+            <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+            <h3 className="mt-4 text-lg font-medium">Generating...</h3>
+            <Card className="mt-4 text-left bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
+                  <ScrollArea className="h-32 w-full">
+                    <div className="flex-1 space-y-1 text-sm text-muted-foreground">
+                      {generationLog.map((log, index) => (
+                        <p key={index} dangerouslySetInnerHTML={{ __html: log }} />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+    
+    if (isFinalizing) {
+      return (
+        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+          <div className="text-center p-4">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
+            <h3 className="mt-4 text-lg font-medium">Done!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Your documentation is ready.</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (editedDocumentation !== null) {
+      return (
+         <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
+           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex-grow">
+                <CardTitle>Documentation for <span className="text-primary">{repoName}</span></CardTitle>
+                <CardDescription>This is the generated documentation for your project.</CardDescription>
+              </div>
+            </CardHeader>
+            <Separator/>
+            <Tabs defaultValue="documentation" className="flex-1 flex flex-col overflow-hidden">
+              <div className='flex justify-between items-center p-4 border-b'>
+                <TabsList>
+                    <TabsTrigger value="documentation">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Documentation
+                    </TabsTrigger>
+                    <TabsTrigger value="files">
+                      <Files className="mr-2 h-4 w-4" />
+                      Files Found ({fileTree.length})
+                    </TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
+                    <Switch
+                      id="view-mode"
+                      checked={viewMode === 'preview'}
+                      onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
+                    />
+                    <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Preview</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy
+                    </Button>
+                    <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
+                  </div>
+                </div>
+              </div>
+               <TabsContent value="documentation" className="flex-1 overflow-auto mt-0">
+                  <div className="p-6">
+                    {viewMode === 'preview' ? (
+                      <div className="prose prose-invert max-w-none break-words">
+                        <ReactMarkdown 
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            h2: ({node, ...props}) => {
+                              const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
+                              const id = slugify(childText);
+                              return <h2 id={id} {...props} />;
+                            },
+                          }}
+                        >
+                          {editedDocumentation}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <Textarea
+                        value={editedDocumentation}
+                        onChange={(e) => setEditedDocumentation(e.target.value)}
+                        className="w-full h-full min-h-full"
+                        rows={1}
+                      />
+                    )}
+                  </div>
+              </TabsContent>
+              <TabsContent value="files" className="flex-1 overflow-auto mt-0">
+                <ScrollArea className="h-full">
+                  <div className="p-6 text-sm">
+                    <ul className="space-y-2">
+                      {fileTree.map((file, index) => (
+                        <li key={index} className="font-mono text-muted-foreground">{file}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
+        </Card>
+      );
+    }
+    
+    return (
+        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+          <div className="text-center p-4">
+            <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+            <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {!isRepoValid
+                ? "Enter a repository URL and check it to begin."
+                : "Configure your options and generate the documentation."
+              }
+            </p>
+          </div>
+        </div>
+    );
+  };
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -577,6 +724,7 @@ export default function DocumentationGenerator() {
                                           <badge.icon className="h-4 w-4 text-muted-foreground" />
                                           {badge.label}
                                         </div>
+
                                       </Label>
                                        <Image src={badge.previewUrl.replace('quelquun667/GitToolz', extractRepoName(repoUrl) || 'quelquun667/GitToolz')} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
                                     </div>
@@ -611,7 +759,7 @@ export default function DocumentationGenerator() {
           )}
         </form>
 
-        {summary && !isGenerating && (
+        {summary && !isGenerating && !isFinalizing && (
           <Card className="flex-grow flex flex-col overflow-hidden shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -626,7 +774,7 @@ export default function DocumentationGenerator() {
           </Card>
         )}
         
-        {headings.length > 0 && !isGenerating && (
+        {headings.length > 0 && !isGenerating && !isFinalizing && (
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -655,124 +803,7 @@ export default function DocumentationGenerator() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        {isGenerating ? (
-          <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center p-4 max-w-md mx-auto">
-              <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-              <h3 className="mt-4 text-lg font-medium">Generating...</h3>
-              <Card className="mt-4 text-left bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
-                    <ScrollArea className="h-32 w-full">
-                      <div className="flex-1 space-y-1 text-sm text-muted-foreground">
-                        {generationLog.map((log, index) => (
-                          <p key={index} dangerouslySetInnerHTML={{ __html: log }} />
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        ) : editedDocumentation !== null ? (
-           <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
-             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div className="flex-grow">
-                  <CardTitle>Documentation for <span className="text-primary">{repoName}</span></CardTitle>
-                  <CardDescription>This is the generated documentation for your project.</CardDescription>
-                </div>
-              </CardHeader>
-              <Separator/>
-              <Tabs defaultValue="documentation" className="flex-1 flex flex-col overflow-hidden">
-                <div className='flex justify-between items-center p-4 border-b'>
-                  <TabsList>
-                      <TabsTrigger value="documentation">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Documentation
-                      </TabsTrigger>
-                      <TabsTrigger value="files">
-                        <Files className="mr-2 h-4 w-4" />
-                        Files Found ({fileTree.length})
-                      </TabsTrigger>
-                  </TabsList>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center space-x-2">
-                      <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
-                      <Switch
-                        id="view-mode"
-                        checked={viewMode === 'preview'}
-                        onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
-                      />
-                      <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Preview</Label>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy
-                      </Button>
-                      <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                 <TabsContent value="documentation" className="flex-1 overflow-auto mt-0">
-                    <div className="p-6">
-                      {viewMode === 'preview' ? (
-                        <div className="prose prose-invert max-w-none break-words">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              h2: ({node, ...props}) => {
-                                const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
-                                const id = slugify(childText);
-                                return <h2 id={id} {...props} />;
-                              },
-                            }}
-                          >
-                            {editedDocumentation}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        <Textarea
-                          value={editedDocumentation}
-                          onChange={(e) => setEditedDocumentation(e.target.value)}
-                          className="w-full h-full min-h-full"
-                          rows={1}
-                        />
-                      )}
-                    </div>
-                </TabsContent>
-                <TabsContent value="files" className="flex-1 overflow-auto mt-0">
-                  <ScrollArea className="h-full">
-                    <div className="p-6 text-sm">
-                      <ul className="space-y-2">
-                        {fileTree.map((file, index) => (
-                          <li key={index} className="font-mono text-muted-foreground">{file}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
-          </Card>
-        ) : (
-          <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center p-4">
-              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {!isRepoValid
-                  ? "Enter a repository URL and check it to begin."
-                  : "Configure your options and generate the documentation."
-                }
-              </p>
-            </div>
-          </div>
-        )}
+        {renderMainContent()}
       </main>
     </div>
   );

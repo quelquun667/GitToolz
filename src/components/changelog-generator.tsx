@@ -32,6 +32,10 @@ export default function ChangelogGenerator() {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [isFetchingCommits, setIsFetchingCommits] = useState(false);
+  const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
+  const [branchError, setBranchError] = useState<string | null>(null);
+  const [isUrlValidating, setIsUrlValidating] = useState(false);
+  const [isBranchValidating, setIsBranchValidating] = useState(false);
 
   // Step 2: Commit selection state
   const [allCommits, setAllCommits] = useState<Commit[]>([]);
@@ -44,8 +48,52 @@ export default function ChangelogGenerator() {
   
   const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
   const [displayEndDate, setDisplayEndDate] = useState<Date | undefined>();
+  
+  const validateField = async (field: 'repoUrl' | 'branch') => {
+    let currentUrl = repoUrl;
+    let currentBranch = branch;
+    if (field === 'repoUrl') {
+      setRepoUrlError(null);
+      if (!currentUrl) return;
+      try { new URL(currentUrl) } catch { setRepoUrlError("Please enter a valid URL."); return; }
+      setIsUrlValidating(true);
+    }
+    if (field === 'branch') {
+      setBranchError(null);
+      if (!currentBranch) return;
+      setIsBranchValidating(true);
+    }
+
+    try {
+      const response = await fetch('/api/validate-repo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: currentUrl, branch: currentBranch }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
+      if (field === 'repoUrl') setRepoUrlError(null);
+      if (field === 'branch') setBranchError(null);
+    } catch (e: any) {
+      const errorMsg = e.message || 'An unknown error occurred.';
+      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('not found')) {
+        setBranchError(errorMsg);
+        setRepoUrlError(null);
+      } else {
+        setRepoUrlError(errorMsg);
+      }
+    } finally {
+      if (field === 'repoUrl') setIsUrlValidating(false);
+      if (field === 'branch') setIsBranchValidating(false);
+    }
+  };
+
 
   const handleFetchCommits = async () => {
+    if (repoUrlError || branchError) return;
+
     if (!repoUrl || !branch || !startDate || !endDate) {
       toast({
         variant: 'destructive',
@@ -138,12 +186,6 @@ export default function ChangelogGenerator() {
               const data = line.substring(6);
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.status) {
-                    setGenerationLog(prev => [...prev, parsed.status]);
-                }
-                if (parsed.changelog) {
-                    setChangelog(parsed.changelog);
-                }
                 if (parsed.error) {
                     toast({
                         variant: 'destructive',
@@ -152,6 +194,12 @@ export default function ChangelogGenerator() {
                     });
                     setIsGenerating(false);
                     return;
+                }
+                if (parsed.status) {
+                    setGenerationLog(prev => [...prev, parsed.status]);
+                }
+                if (parsed.changelog) {
+                    setChangelog(parsed.changelog);
                 }
               } catch (e) {
                 console.error("Failed to parse stream data chunk:", data, e);
@@ -199,7 +247,8 @@ export default function ChangelogGenerator() {
   };
   
   const totalSelected = Object.values(selectedCommits).filter(Boolean).length;
-  
+  const isFetchDisabled = isFetchingCommits || !!repoUrlError || !!branchError || isUrlValidating || isBranchValidating;
+
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
       <aside className="w-full md:w-[450px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
@@ -211,11 +260,15 @@ export default function ChangelogGenerator() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="repoUrl" className="flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />Repository URL</Label>
-              <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} />
+              <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repoUrl')} />
+               {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating URL...</p>}
+               {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="branch" className="flex items-center gap-2"><History className="h-4 w-4 text-primary" />Branch to Analyze</Label>
-              <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)}/>
+              <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')}/>
+               {isBranchValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating branch...</p>}
+               {branchError && <p className="text-xs text-destructive">{branchError}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -243,7 +296,7 @@ export default function ChangelogGenerator() {
                 </Popover>
               </div>
             </div>
-            <Button onClick={handleFetchCommits} className="w-full" disabled={isFetchingCommits}>
+            <Button onClick={handleFetchCommits} className="w-full" disabled={isFetchDisabled}>
               {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
             </Button>
           </CardContent>

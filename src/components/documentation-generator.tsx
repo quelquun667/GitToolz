@@ -50,12 +50,12 @@ const BADGE_OPTIONS = [
 ];
 
 
-function SubmitButton({ isGenerating, hasExistingDocs }: { isGenerating: boolean, hasExistingDocs: boolean }) {
+function SubmitButton({ isGenerating, hasExistingDocs, isDisabled }: { isGenerating: boolean, hasExistingDocs: boolean, isDisabled: boolean }) {
   const buttonText = hasExistingDocs ? 'Regenerate Documentation' : 'Generate Documentation';
   const Icon = hasExistingDocs ? RefreshCw : Sparkles;
 
   return (
-    <Button type="submit" className="w-full" disabled={isGenerating}>
+    <Button type="submit" className="w-full" disabled={isGenerating || isDisabled}>
       {isGenerating ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -103,6 +103,11 @@ export default function DocumentationGenerator() {
   const [isBadgesOpen, setIsBadgesOpen] = useState(false);
   const [buyMeACoffeeUsername, setBuyMeACoffeeUsername] = useState('');
   const [twitterUsername, setTwitterUsername] = useState('');
+  
+  const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
+  const [branchError, setBranchError] = useState<string | null>(null);
+  const [isUrlValidating, setIsUrlValidating] = useState(false);
+  const [isBranchValidating, setIsBranchValidating] = useState(false);
 
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
@@ -124,6 +129,47 @@ export default function DocumentationGenerator() {
     const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
     return headingLines.map(line => line.replace(/^##\s/, ''));
   }, [editedDocumentation]);
+
+  const validateField = async (field: 'repoUrl' | 'branch') => {
+    let currentUrl = repoUrl;
+    let currentBranch = branch;
+    if (field === 'repoUrl') {
+      setRepoUrlError(null);
+      if (!currentUrl) return;
+      try { new URL(currentUrl) } catch { setRepoUrlError("Please enter a valid URL."); return; }
+      setIsUrlValidating(true);
+    }
+    if (field === 'branch') {
+      setBranchError(null);
+      if (!currentBranch) return;
+      setIsBranchValidating(true);
+    }
+
+    try {
+      const response = await fetch('/api/validate-repo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl: currentUrl, branch: currentBranch }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error);
+      }
+      if (field === 'repoUrl') setRepoUrlError(null);
+      if (field === 'branch') setBranchError(null);
+    } catch (e: any) {
+      const errorMsg = e.message || 'An unknown error occurred.';
+      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('not found')) {
+        setBranchError(errorMsg);
+        setRepoUrlError(null);
+      } else {
+        setRepoUrlError(errorMsg);
+      }
+    } finally {
+      if (field === 'repoUrl') setIsUrlValidating(false);
+      if (field === 'branch') setIsBranchValidating(false);
+    }
+  };
 
   const handleCopy = () => {
     if (editedDocumentation === null) return;
@@ -163,6 +209,8 @@ export default function DocumentationGenerator() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isGenerating || repoUrlError || branchError) return;
+
     if (documentation) {
       setShowConfirmationDialog(true);
     } else {
@@ -259,6 +307,7 @@ export default function DocumentationGenerator() {
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
+  const isSubmitDisabled = !!repoUrlError || !!branchError || isUrlValidating || isBranchValidating;
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -297,14 +346,18 @@ export default function DocumentationGenerator() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} />
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repoUrl')} />
+                  {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating URL...</p>}
+                  {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="branch" className="flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branch / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)}/>
+                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')} />
+                  {isBranchValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating branch...</p>}
+                  {branchError && <p className="text-xs text-destructive">{branchError}</p>}
                 </div>
               </div>
             </CardContent>
@@ -398,7 +451,7 @@ export default function DocumentationGenerator() {
             </CardHeader>
           </Card>
           
-          <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} />
+          <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isSubmitDisabled} />
         </form>
 
         {summary && !isGenerating && (

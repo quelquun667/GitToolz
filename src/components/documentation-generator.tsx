@@ -62,12 +62,12 @@ type BadgeOption = {
 };
 
 const BADGE_OPTIONS: BadgeOption[] = [
-    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/user/repo' },
-    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/user/repo' },
-    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/user/repo' },
-    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/user/repo' },
-    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitCommit, previewUrl: 'https://img.shields.io/github/last-commit/user/repo' },
-    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: Database, previewUrl: 'https://img.shields.io/github/repo-size/user/repo' },
+    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/quelquun667/GitDocs' },
+    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/quelquun667/GitDocs' },
+    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/quelquun667/GitDocs' },
+    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/quelquun667/GitDocs' },
+    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitCommit, previewUrl: 'https://img.shields.io/github/last-commit/quelquun667/GitDocs' },
+    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: Database, previewUrl: 'https://img.shields.io/github/repo-size/quelquun667/GitDocs' },
     { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', icon: Coffee, previewUrl: 'https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black', placeholder: 'your-username', inputLabel: 'Buy Me A Coffee Username', inputType: 'text'},
     { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
     { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
@@ -161,30 +161,30 @@ export default function DocumentationGenerator() {
     return headingLines.map(line => line.replace(/^##\s/, ''));
   }, [editedDocumentation]);
 
-  const validateField = async (field: 'repo' | 'branch') => {
+  const validateField = async () => {
     setRepoUrlError(null);
     setBranchError(null);
 
     if (!repoUrl) {
-      if (field === 'repo') setRepoUrlError('Repository URL is required.');
+      setRepoUrlError('Repository URL is required.');
       return;
     }
-    try {
-      new URL(repoUrl);
-      if (!repoUrl.includes('github.com')) throw new Error();
+     try {
+        new URL(repoUrl);
+        if (!repoUrl.includes('github.com')) throw new Error();
     } catch {
-      if (field === 'repo') setRepoUrlError('Please enter a valid GitHub URL.');
-      return;
+        setRepoUrlError('Please enter a valid GitHub URL.');
+        return;
     }
-
+    
     if (!branch) {
-      if (field === 'branch') setBranchError('Branch or tag is required.');
+      setBranchError('Branch or tag is required.');
       return;
     }
 
     setIsUrlValidating(true);
     setIsBranchValidating(true);
-
+    
     try {
       const response = await fetch('/api/validate-repo', {
         method: 'POST',
@@ -193,13 +193,13 @@ export default function DocumentationGenerator() {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error || 'Validation failed.');
+        throw new Error(result.error);
       }
       setRepoUrlError(null);
       setBranchError(null);
     } catch (e: any) {
       const errorMsg = e.message || 'An unknown error occurred.';
-      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('not found')) {
+      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('tag')) {
         setBranchError(errorMsg);
         setRepoUrlError(null);
       } else {
@@ -272,25 +272,18 @@ export default function DocumentationGenerator() {
     event.preventDefault();
     if (isGenerating) return;
     
-    // Manually trigger validation before submitting
-    validateField('repo').then(() => {
-        validateField('branch').then(() => {
-            const hasError = !!repoUrlError || !!branchError;
-            const formIsValid = formRef.current?.checkValidity();
-
-            if (hasError || !formIsValid) {
-                if (!repoUrl) setRepoUrlError('Repository URL is required.');
-                if (!branch) setBranchError('Branch or tag is required.');
-                formRef.current?.reportValidity();
-                return;
-            }
-
-            if (documentation) {
-                setShowConfirmationDialog(true);
-            } else {
-                startGeneration();
-            }
-        });
+    validateField().then(() => {
+      const formIsValid = formRef.current?.checkValidity();
+      if (!repoUrlError && !branchError && formIsValid) {
+        if (documentation) {
+          setShowConfirmationDialog(true);
+        } else {
+          startGeneration();
+        }
+      } else {
+        // This will trigger native browser validation messages
+        formRef.current?.reportValidity();
+      }
     });
   };
 
@@ -421,8 +414,8 @@ export default function DocumentationGenerator() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repo')} />
-                  {(isUrlValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={validateField} />
+                  {(isUrlValidating || isBranchValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating...</p>}
                   {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
                 <div className="space-y-2">
@@ -430,8 +423,7 @@ export default function DocumentationGenerator() {
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branch / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')} />
-                  {(isBranchValidating && !isUrlValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating branch...</p>}
+                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={validateField} />
                   {branchError && <p className="text-xs text-destructive">{branchError}</p>}
                 </div>
               </div>

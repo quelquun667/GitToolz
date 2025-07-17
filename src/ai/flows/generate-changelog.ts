@@ -3,20 +3,16 @@
 /**
  * @fileOverview Changelog generation flow for a Git repository.
  *
- * - generateChangelog - A function that generates a changelog between two Git refs.
+ * - generateChangelog - A function that generates a changelog from a list of commit messages.
  * - GenerateChangelogInput - The input type for the generateChangelog function.
  * - GenerateChangelogOutput - The type for a chunk of the streaming output.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getRepoCommitsByDate } from '@/services/github';
 
 const GenerateChangelogInputSchema = z.object({
-  repoUrl: z.string().describe('The URL of the Git repository.'),
-  branch: z.string().describe('The branch to analyze.'),
-  startDate: z.string().describe('The starting date for the changelog.'),
-  endDate: z.string().describe('The ending date for the changelog.'),
+  commitMessages: z.array(z.string()).describe('A list of commit messages to be included in the changelog.'),
 });
 export type GenerateChangelogInput = z.infer<typeof GenerateChangelogInputSchema>;
 
@@ -29,7 +25,7 @@ export type GenerateChangelogOutput = z.infer<typeof GenerateChangelogOutputSche
 
 const generateChangelogPrompt = ai.definePrompt({
   name: 'generateChangelogPrompt',
-  input: { schema: z.object({ commitMessages: z.array(z.string()) }) },
+  input: { schema: GenerateChangelogInputSchema },
   output: { schema: z.object({ changelog: z.string() }) },
   prompt: `You are an AI expert at creating release notes and changelogs from Git commit messages.
   
@@ -75,18 +71,10 @@ export async function* generateChangelog(
 ): AsyncGenerator<GenerateChangelogOutput> {
   try {
     yield { status: 'Initializing changelog generation...' };
-    yield { status: `Fetching commits for ${input.repoUrl} on branch '${input.branch}'...` };
-    
-    const commits = await getRepoCommitsByDate(input.repoUrl, input.branch, input.startDate, input.endDate);
-    if (commits.length === 0) {
-        throw new Error('No commits found in the specified date range.');
-    }
-
-    yield { status: `Found ${commits.length} commits to analyze.` };
+    yield { status: `Received ${input.commitMessages.length} commits to analyze.` };
     yield { status: 'Generating changelog with AI...' };
 
-    const commitMessages = commits.map(c => c.message);
-    const { output } = await generateChangelogPrompt({ commitMessages });
+    const { output } = await generateChangelogPrompt(input);
 
     if (!output?.changelog) {
       throw new Error('AI failed to generate changelog content.');
@@ -101,5 +89,3 @@ export async function* generateChangelog(
     yield { error };
   }
 }
-
-    

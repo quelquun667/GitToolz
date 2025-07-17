@@ -3,6 +3,7 @@
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
+import { getRepoCommitsByDate } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -12,13 +13,16 @@ const docFormSchema = z.object({
   badges: z.array(z.string()).optional(),
 });
 
-const changelogFormSchema = z.object({
+const fetchCommitsSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
   branch: z.string().min(1, { message: 'Branch is required.' }),
   startDate: z.string().datetime({ message: 'Please select a valid start date.' }),
   endDate: z.string().datetime({ message: 'Please select a valid end date.' }),
 });
 
+const changelogFormSchema = z.object({
+  commitMessages: z.array(z.string()).min(1, { message: 'Please select at least one commit.' }),
+});
 
 export async function summarizeAction(documentation: string): Promise<{summary: string}> {
   try {
@@ -28,6 +32,27 @@ export async function summarizeAction(documentation: string): Promise<{summary: 
      return { summary: "Could not generate summary." };
   }
 }
+
+export async function fetchCommitsAction(
+  input: z.infer<typeof fetchCommitsSchema>
+): Promise<{ commits?: { sha: string; message: string; author: string | null }[]; error?: string }> {
+    const validatedFields = fetchCommitsSchema.safeParse(input);
+    if (!validatedFields.success) {
+      return { error: "Invalid input." };
+    }
+    
+    try {
+      const commits = await getRepoCommitsByDate(validatedFields.data.repoUrl, validatedFields.data.branch, validatedFields.data.startDate, validatedFields.data.endDate);
+      if (commits.length === 0) {
+        return { error: 'No commits found in the specified date range.' };
+      }
+      return { commits };
+    } catch (e) {
+      const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
+      return { error };
+    }
+}
+
 
 export async function streamDocsAction(
   input: Omit<GenerateDocumentationInput, 'fileTree' | 'fileContents'>
@@ -89,5 +114,3 @@ export async function streamChangelogAction(
 
   return stream;
 }
-
-    

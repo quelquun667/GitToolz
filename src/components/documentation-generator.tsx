@@ -201,27 +201,32 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     }
   }, [imageSource, repoImages]);
 
-  const handleBranchChange = async (newBranch: string) => {
-    setBranch(newBranch);
-    if (newBranch) {
-        setIsFetchingTree(true);
-        setFileTree([]);
-        try {
-            const result = await getRepoTree({ repoUrl, branch: newBranch });
-            if (result.error) {
-                throw new Error(result.error);
+  useEffect(() => {
+    // Fetch tree when branch changes
+    const fetchTree = async () => {
+        if (branch && repoUrl) {
+            setIsFetchingTree(true);
+            setFileTree([]);
+            setImagePath('');
+            try {
+                const result = await getRepoTree({ repoUrl, branch });
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+                setFileTree(result.tree || []);
+            } catch (e) {
+                const error = e instanceof Error ? e.message : 'Failed to fetch repository file tree.';
+                toast({ variant: 'destructive', title: 'Error', description: error });
+            } finally {
+                setIsFetchingTree(false);
             }
-            setFileTree(result.tree || []);
-        } catch (e) {
-            const error = e instanceof Error ? e.message : 'Failed to fetch repository file tree.';
-            toast({ variant: 'destructive', title: 'Error', description: error });
-        } finally {
-            setIsFetchingTree(false);
+        } else {
+            setFileTree([]);
+            setImagePath('');
         }
-    } else {
-        setFileTree([]);
-    }
-  };
+    };
+    fetchTree();
+  }, [branch, repoUrl, toast]);
 
 
   const headings = useMemo(() => {
@@ -572,7 +577,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                   Branch / Tag
                 </Label>
                 <div className="flex items-center gap-2">
-                    <Select onValueChange={handleBranchChange} value={branch} disabled={branches.length === 0 || isFetchingTree}>
+                    <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0 || isFetchingTree}>
                         <SelectTrigger>
                             <SelectValue placeholder={"Select a branch"} />
                         </SelectTrigger>

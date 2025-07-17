@@ -14,8 +14,9 @@ const docFormSchema = z.object({
 
 const changelogFormSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
-  startRef: z.string().min(1, { message: 'Start tag/branch is required.' }),
-  endRef: z.string().min(1, { message: 'End tag/branch is required.' }),
+  branch: z.string().min(1, { message: 'Branch is required.' }),
+  startDate: z.string().datetime({ message: 'Please select a valid start date.' }),
+  endDate: z.string().datetime({ message: 'Please select a valid end date.' }),
 });
 
 
@@ -88,3 +89,5 @@ export async function streamChangelogAction(
 
   return stream;
 }
+
+    

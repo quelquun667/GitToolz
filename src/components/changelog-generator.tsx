@@ -8,8 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, History, Copy, FileText, Terminal, RefreshCw, Sparkles } from 'lucide-react';
+import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+
 
 function SubmitButton({ isGenerating, hasExistingChangelog }: { isGenerating: boolean, hasExistingChangelog: boolean }) {
   const buttonText = hasExistingChangelog ? 'Regenerate Changelog' : 'Generate Changelog';
@@ -38,12 +43,17 @@ export default function ChangelogGenerator() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [repoUrl, setRepoUrl] = useState('');
-  const [startRef, setStartRef] = useState('');
-  const [endRef, setEndRef] = useState('');
+  const [branch, setBranch] = useState('main');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+
 
   const [changelog, setChangelog] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
+  
+  const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
+  const [displayEndDate, setDisplayEndDate] = useState<Date | undefined>();
 
   const handleCopy = () => {
     if (changelog === null) return;
@@ -58,11 +68,14 @@ export default function ChangelogGenerator() {
   const handleDownload = () => {
     if (changelog === null) return;
 
+    const start = startDate ? format(startDate, 'yyyy-MM-dd') : 'start';
+    const end = endDate ? format(endDate, 'yyyy-MM-dd') : 'end';
+
     const blob = new Blob([changelog], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `CHANGELOG-${startRef}-to-${endRef}.md`;
+    link.download = `CHANGELOG-${start}-to-${end}.md`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -72,20 +85,26 @@ export default function ChangelogGenerator() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     
-    if (!formRef.current?.checkValidity()) {
-        formRef.current?.reportValidity();
+    if (!formRef.current?.checkValidity() || !startDate || !endDate) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Information',
+            description: 'Please select a start and end date.',
+        });
         return;
     }
     
     setIsGenerating(true);
     setChangelog(null);
     setGenerationLog([]);
+    setDisplayStartDate(startDate);
+    setDisplayEndDate(endDate);
 
     try {
       const response = await fetch('/api/changelog', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl, startRef, endRef }),
+          body: JSON.stringify({ repoUrl, branch, startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
       });
 
       if (!response.body) throw new Error('No response body');
@@ -151,7 +170,7 @@ export default function ChangelogGenerator() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Repository Details</CardTitle>
-              <CardDescription>Enter a public GitHub repo and a range of commits (using tags, branches, or commit hashes).</CardDescription>
+              <CardDescription>Enter a public GitHub repo and date range to generate a changelog from.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -163,18 +182,63 @@ export default function ChangelogGenerator() {
                   <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} />
                 </div>
                  <div className="space-y-2">
-                  <Label htmlFor="startRef" className="flex items-center gap-2">
-                    <GitBranch className="h-4 w-4 text-primary" />
-                    Start Ref (Tag, Branch, Commit)
+                  <Label htmlFor="branch" className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-primary" />
+                    Branch to Analyze
                   </Label>
-                  <Input id="startRef" name="startRef" placeholder="main or v1.0.0" required value={startRef} onChange={e => setStartRef(e.target.value)}/>
+                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)}/>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endRef" className="flex items-center gap-2">
-                    <GitBranch className="h-4 w-4 text-primary" />
-                    End Ref (Tag, Branch, Commit)
-                  </Label>
-                  <Input id="endRef" name="endRef" placeholder="develop or v1.1.0" required value={endRef} onChange={e => setEndRef(e.target.value)}/>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="startDate">Start Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !startDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={startDate}
+                                    onSelect={setStartDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="endDate">End Date</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal",
+                                        !endDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={endDate}
+                                    onSelect={setEndDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                 </div>
               </div>
             </CardContent>
@@ -206,12 +270,12 @@ export default function ChangelogGenerator() {
               </Card>
             </div>
           </div>
-        ) : changelog !== null ? (
+        ) : changelog !== null && displayStartDate && displayEndDate ? (
            <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
              <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
                   <CardTitle>Changelog</CardTitle>
-                  <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{startRef}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{endRef}</span></CardDescription>
+                  <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayStartDate, "PPP")}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayEndDate, "PPP")}</span></CardDescription>
                 </div>
                  <div className="flex gap-2">
                     <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
@@ -238,7 +302,7 @@ export default function ChangelogGenerator() {
               <History className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">No Changelog Generated</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter a repository and commit range to generate a changelog.
+                Enter a repository and date range to generate a changelog.
               </p>
             </div>
           </div>
@@ -247,3 +311,5 @@ export default function ChangelogGenerator() {
     </div>
   );
 }
+
+    

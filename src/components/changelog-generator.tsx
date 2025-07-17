@@ -134,7 +134,13 @@ export default function ChangelogGenerator() {
                     setChangelog(parsed.changelog);
                 }
                 if (parsed.error) {
-                    throw new Error(parsed.error);
+                    toast({
+                        variant: 'destructive',
+                        title: 'Generation Failed',
+                        description: parsed.error,
+                    });
+                    // End generation on error
+                    return;
                 }
               } catch (e) {
                 console.error("Failed to parse stream data chunk:", data, e);
@@ -311,5 +317,3 @@ export default function ChangelogGenerator() {
     </div>
   );
 }
-
-    

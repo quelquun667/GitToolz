@@ -29,6 +29,26 @@ function parseRepoUrl(url: string): { owner: string; repo: string } {
   }
 }
 
+export async function validateRepo(repoUrl: string, branch: string): Promise<void> {
+  const { owner, repo } = parseRepoUrl(repoUrl);
+  try {
+    // We fetch the branch. If it doesn't exist, it will throw a 404.
+    await octokit.rest.repos.getBranch({
+      owner,
+      repo,
+      branch,
+    });
+  } catch (error: any) {
+    if (error.status === 404) {
+      throw new Error(`Repository not found or branch "${branch}" does not exist.`);
+    }
+    if (error.status === 401) {
+      throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+    }
+    throw new Error('Failed to validate repository on GitHub.');
+  }
+}
+
 export async function getRepoTree(repoUrl: string, branch: string): Promise<{ path: string; type: string; }[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
 

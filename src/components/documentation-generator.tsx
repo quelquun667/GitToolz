@@ -68,13 +68,13 @@ type BadgeOption = {
 };
 
 const BADGE_OPTIONS: BadgeOption[] = [
-    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/quelquun667/GitToolz' },
-    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/quelquun667/GitToolz' },
-    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/quelquun667/GitToolz' },
-    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/quelquun667/GitToolz' },
-    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitBranch, previewUrl: 'https://img.shields.io/github/last-commit/quelquun667/GitToolz' },
-    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: GitBranch, previewUrl: 'https://img.shields.io/github/repo-size/quelquun667/GitToolz' },
-    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://api.star-history.com/svg?repos=quelquun667/GitToolz&type=Date' },
+    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/user/repo' },
+    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/user/repo' },
+    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/user/repo' },
+    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/user/repo' },
+    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitBranch, previewUrl: 'https://img.shields.io/github/last-commit/user/repo' },
+    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: GitBranch, previewUrl: 'https://img.shields.io/github/repo-size/user/repo' },
+    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://api.star-history.com/svg?repos=user/repo&type=Date' },
     { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', icon: Coffee, previewUrl: 'https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black', placeholder: 'your-username', inputLabel: 'Buy Me A Coffee Username', inputType: 'text'},
     { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/QuelquunMe?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
     { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/W3Qtess2m5?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
@@ -110,17 +110,17 @@ const slugify = (text: string) => {
     .replace(/[^\w-]+/g, '');
 };
 
-const extractRepoName = (url: string | null) => {
-  if (!url) return '';
+const extractRepoPath = (url: string | null) => {
+  if (!url) return 'user/repo';
   try {
     const path = new URL(url).pathname;
     const parts = path.split('/').filter(p => p);
     if (parts.length >= 2) {
-      return `${parts[parts.length - 2]}/${parts[parts.length - 1]}`;
+      return `${parts[parts.length - 2]}/${parts[parts.length - 1].replace('.git', '')}`;
     }
-    return url;
+    return 'user/repo';
   } catch {
-    return url;
+    return 'user/repo';
   }
 };
 
@@ -394,7 +394,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   };
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
-  const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
+  const repoPath = useMemo(() => extractRepoPath(repoUrl), [repoUrl]);
   const isGenerateDisabled = !repoUrl || !branch || isFetchingTree;
 
   const renderMainContent = () => {
@@ -440,7 +440,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
          <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex-grow">
-                <CardTitle>Documentation for <span className="text-primary">{repoName}</span></CardTitle>
+                <CardTitle>Documentation for <span className="text-primary">{repoPath}</span></CardTitle>
                 <CardDescription>This is the generated documentation for your project.</CardDescription>
               </div>
             </CardHeader>
@@ -799,7 +799,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                                       </div>
 
                                     </Label>
-                                     <Image src={badge.previewUrl.replace('quelquun667/GitToolz', extractRepoName(repoUrl) || 'quelquun667/GitToolz')} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
+                                     <Image src={badge.previewUrl.replace('user/repo', repoPath)} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
                                   </div>
                                   {badge.inputLabel && selectedBadges.includes(badge.value) && (
                                     <div className="relative pl-7 mt-2">
@@ -880,3 +880,4 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
+

@@ -680,8 +680,8 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                                   <CommandItem
                                     key={path}
                                     value={path}
-                                    onSelect={(currentValue) => {
-                                      setImagePath(currentValue === imagePath ? "" : currentValue);
+                                    onSelect={() => {
+                                      setImagePath(path === imagePath ? "" : path);
                                       setIsImageSelectorOpen(false);
                                     }}
                                   >
@@ -780,7 +780,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                       <Separator className="block md:hidden"/>
                       <div className="w-full md:w-1/2">
                          <h4 className="font-medium text-foreground">Available Items</h4>
-                         <p className="text-xs text-muted-foreground mb-4">Previews use an example repository. Yours will be generated dynamically.</p>
+                         <p className="text-xs text-muted-foreground mb-4">Previews use your entered repository. Please ensure it is public.</p>
                          <ScrollArea className="h-72">
                            <div className="space-y-4 pr-4">
                               {BADGE_OPTIONS.map((badge) => (
@@ -880,4 +880,3 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
-

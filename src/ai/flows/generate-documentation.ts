@@ -61,20 +61,20 @@ const generateDocumentationPrompt = ai.definePrompt({
     \`\`\`
     {{/each}}
   
-  {{#if imageSource}}
-  {{#ifneq imageSource "none"}}
-  The user wants to include a project image.
+  {{#if imageUrl}}
+  The user wants to include a project image from a URL.
   - Image Position: {{imagePosition}}
-  {{#if (eq imageSource "url")}}
   - Image URL: {{{imageUrl}}}
   - Markdown to use: ![[Project Image]]({{{imageUrl}}})
+  Place the image markdown at the {{imagePosition}} of the document, either before all other content or after all other content. Add two newlines after the image if it's at the top, or two newlines before if it's at the bottom.
   {{/if}}
-  {{#if (eq imageSource "repo")}}
+  
+  {{#if imagePath}}
+  The user wants to include a project image from the repository.
+  - Image Position: {{imagePosition}}
   - Image Path in Repo: {{{imagePath}}}
   - Markdown to use: ![[Project Image]]({{{imagePath}}})
-  {{/if}}
   Place the image markdown at the {{imagePosition}} of the document, either before all other content or after all other content. Add two newlines after the image if it's at the top, or two newlines before if it's at the bottom.
-  {{/ifneq}}
   {{/if}}
   
   The documentation MUST be structured like a professional README.md file.
@@ -152,6 +152,7 @@ export async function* generateDocumentation(
     yield { status: 'Initializing documentation generation...' };
     yield { status: `Analyzing repository: ${input.repoUrl}` };
     
+    // The file tree is now passed directly in the input, so we don't need to fetch it here.
     const filePaths = input.fileTree.split('\n');
     const fileContents: Record<string, string> = {};
     const filesToRead = filePaths
@@ -169,8 +170,19 @@ export async function* generateDocumentation(
         }
     }
 
+    // Filter out image source 'none' and empty URLs/paths before sending to the prompt
+    let finalInput = {...input, fileContents};
+    if (input.imageSource === 'none' || (input.imageSource === 'url' && !input.imageUrl) || (input.imageSource === 'repo' && !input.imagePath)) {
+        finalInput.imageUrl = undefined;
+        finalInput.imagePath = undefined;
+    } else if (input.imageSource === 'repo') {
+        finalInput.imageUrl = undefined; // Ensure only one image field is sent
+    } else if (input.imageSource === 'url') {
+        finalInput.imagePath = undefined; // Ensure only one image field is sent
+    }
+
     yield { status: 'Generating content with AI...' };
-    const { output } = await generateDocumentationPrompt({...input, fileContents});
+    const { output } = await generateDocumentationPrompt(finalInput);
     
     if (!output?.documentation) {
       throw new Error('AI failed to generate documentation content.');

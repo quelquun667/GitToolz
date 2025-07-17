@@ -25,7 +25,11 @@ const GenerateDocumentationInputSchema = z.object({
   linkedinProfile: z.string().optional().describe('The profile path for the LinkedIn badge (e.g., in/your-name).'),
   customInstructions: z.string().optional().describe('Custom instructions to guide the AI in generating the documentation.'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
-  fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
+  fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.'),
+  imageSource: z.enum(['none', 'url', 'repo']).optional().describe("The source for the project image, if any. Can be 'url' or 'repo'."),
+  imageUrl: z.string().url().optional().describe("URL of the project image, if source is 'url'."),
+  imagePath: z.string().optional().describe("Path to the project image in the repository, if source is 'repo'."),
+  imagePosition: z.enum(['top', 'bottom']).optional().default('top').describe("Position of the project image in the document."),
 });
 export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInputSchema>;
 
@@ -57,7 +61,23 @@ const generateDocumentationPrompt = ai.definePrompt({
     {{{this}}}
     \`\`\`
     {{/each}}
-
+  
+  {{#if imageSource}}
+  {{#ifneq imageSource "none"}}
+  The user wants to include a project image.
+  - Image Position: {{imagePosition}}
+  {{#if (eq imageSource "url")}}
+  - Image URL: {{{imageUrl}}}
+  - Markdown to use: ![[Project Image]]({{{imageUrl}}})
+  {{/if}}
+  {{#if (eq imageSource "repo")}}
+  - Image Path in Repo: {{{imagePath}}}
+  - Markdown to use: ![[Project Image]]({{{imagePath}}})
+  {{/if}}
+  Place the image markdown at the {{imagePosition}} of the document, either before all other content or after all other content. Add two newlines after the image if it's at the top, or two newlines before if it's at the bottom.
+  {{/ifneq}}
+  {{/if}}
+  
   The documentation MUST be structured like a professional README.md file.
 
   The final output MUST only contain the sections requested by the user. The sections should be in this order:

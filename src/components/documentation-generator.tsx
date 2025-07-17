@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2, Image as ImageIcon } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2, Image as ImageIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,6 +40,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from './ui/command';
+import { cn } from '@/lib/utils';
 
 
 const DOC_SECTIONS = [
@@ -119,6 +123,8 @@ const extractRepoName = (url: string | null) => {
   }
 };
 
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp'];
+
 type DocumentationGeneratorProps = {
   repoUrl: string;
   branches: string[];
@@ -137,6 +143,9 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [imageUrl, setImageUrl] = useState('');
   const [imagePath, setImagePath] = useState('');
   const [imagePosition, setImagePosition] = useState<'top' | 'bottom'>('top');
+  const [repoImages, setRepoImages] = useState<string[]>([]);
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+
 
   // Badge State
   const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
@@ -176,6 +185,23 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     setEditedDocumentation(documentation);
   }, [documentation]);
   
+  useEffect(() => {
+    if (fileTree.length > 0) {
+      const images = fileTree.filter(path => IMAGE_EXTENSIONS.some(ext => path.toLowerCase().endsWith(ext)));
+      setRepoImages(images);
+    } else {
+      setRepoImages([]);
+    }
+  }, [fileTree]);
+
+  useEffect(() => {
+    // If user switches to 'repo' and there are no images, switch back to 'none'
+    if (imageSource === 'repo' && repoImages.length === 0) {
+      setImageSource('none');
+    }
+  }, [imageSource, repoImages]);
+
+
   const headings = useMemo(() => {
     if (!editedDocumentation) return [];
     const headingLines = editedDocumentation.match(/^##\s(.+)/gm) || [];
@@ -574,48 +600,95 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                 <CardDescription>Add a logo or banner to the documentation.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <RadioGroup value={imageSource} onValueChange={(value) => setImageSource(value as 'none' | 'url' | 'repo')} className="flex gap-4">
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="none" id="img-none"/>
-                        <Label htmlFor="img-none" className="font-normal">None</Label>
+                  <RadioGroup value={imageSource} onValueChange={(value) => setImageSource(value as 'none' | 'url' | 'repo')} className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="none" id="img-none"/>
+                          <Label htmlFor="img-none" className="font-normal">None</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="url" id="img-url"/>
+                          <Label htmlFor="img-url" className="font-normal">From URL</Label>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="repo" id="img-repo" disabled={repoImages.length === 0} />
+                                <Label htmlFor="img-repo" className={cn("font-normal", repoImages.length === 0 && "text-muted-foreground cursor-not-allowed")}>From Repository</Label>
+                            </div>
+                          </TooltipTrigger>
+                          {repoImages.length === 0 && (
+                            <TooltipContent>
+                              <p>No images found in repository.</p>
+                              <p className="text-xs text-muted-foreground">Generate docs first to scan files.</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
+                  </RadioGroup>
+                  
+                  {imageSource === 'url' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="imageUrl">Image URL</Label>
+                      <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/logo.png" />
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="url" id="img-url"/>
-                        <Label htmlFor="img-url" className="font-normal">From URL</Label>
+                  )}
+                  {imageSource === 'repo' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="imagePath">Image Path</Label>
+                       <Popover open={isImageSelectorOpen} onOpenChange={setIsImageSelectorOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isImageSelectorOpen}
+                            className="w-full justify-between"
+                          >
+                            {imagePath ? imagePath : "Select image..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search images..." />
+                            <CommandEmpty>No image found.</CommandEmpty>
+                            <CommandGroup>
+                              <ScrollArea className="h-48">
+                                {repoImages.map((path) => (
+                                  <CommandItem
+                                    key={path}
+                                    value={path}
+                                    onSelect={(currentValue) => {
+                                      setImagePath(currentValue === imagePath ? "" : currentValue);
+                                      setIsImageSelectorOpen(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", imagePath === path ? "opacity-100" : "opacity-0")}/>
+                                    {path}
+                                  </CommandItem>
+                                ))}
+                              </ScrollArea>
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="repo" id="img-repo"/>
-                        <Label htmlFor="img-repo" className="font-normal">From Repository</Label>
-                    </div>
-                </RadioGroup>
-                
-                {imageSource === 'url' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="imageUrl">Image URL</Label>
-                    <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/logo.png" />
-                  </div>
-                )}
-                {imageSource === 'repo' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="imagePath">Path in Repository</Label>
-                    <Input id="imagePath" value={imagePath} onChange={(e) => setImagePath(e.target.value)} placeholder="e.g., assets/banner.jpg" />
-                  </div>
-                )}
-                {imageSource !== 'none' && (
-                  <div className="space-y-2">
-                    <Label>Position</Label>
-                    <RadioGroup value={imagePosition} onValueChange={(value) => setImagePosition(value as 'top' | 'bottom')} className="flex gap-4">
-                        <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="top" id="pos-top-img"/>
-                            <Label htmlFor="pos-top-img" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
-                        </div>
+                  )}
+                  {imageSource !== 'none' && (
+                    <div className="space-y-2">
+                      <Label>Position</Label>
+                      <RadioGroup value={imagePosition} onValueChange={(value) => setImagePosition(value as 'top' | 'bottom')} className="flex gap-4">
                           <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="bottom" id="pos-bottom-img"/>
-                            <Label htmlFor="pos-bottom-img" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
-                        </div>
-                    </RadioGroup>
-                  </div>
-                )}
+                              <RadioGroupItem value="top" id="pos-top-img"/>
+                              <Label htmlFor="pos-top-img" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                          </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="bottom" id="pos-bottom-img"/>
+                              <Label htmlFor="pos-bottom-img" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                          </div>
+                      </RadioGroup>
+                    </div>
+                  )}
               </CardContent>
             </Card>
 
@@ -785,3 +858,4 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
+

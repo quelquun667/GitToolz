@@ -49,51 +49,50 @@ export default function ChangelogGenerator() {
   const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
   const [displayEndDate, setDisplayEndDate] = useState<Date | undefined>();
   
-  const validateField = async (field: 'repoUrl' | 'branch') => {
-    let currentUrl = repoUrl;
-    let currentBranch = branch;
+  const handleBlur = async () => {
+    setRepoUrlError(null);
+    setBranchError(null);
 
-    if (field === 'repoUrl') {
-      setRepoUrlError(null);
-      if (!currentUrl) return;
-      try {
-        new URL(currentUrl);
-        if (!currentUrl.includes('github.com')) throw new Error();
-      } catch {
+    if (!repoUrl) {
+      setRepoUrlError('Repository URL is required.');
+      return;
+    }
+     try {
+        new URL(repoUrl);
+        if (!repoUrl.includes('github.com')) throw new Error();
+    } catch {
         setRepoUrlError('Please enter a valid GitHub URL.');
         return;
-      }
-      setIsUrlValidating(true);
-    }
-
-    if (field === 'branch') {
-      setBranchError(null);
-      if (!currentBranch) return;
-      setIsBranchValidating(true);
     }
     
-    // Always validate both once one field is blurred
+    if (!branch) {
+      setBranchError('Branch is required.');
+      return;
+    }
+
+    setIsUrlValidating(true);
+    setIsBranchValidating(true);
+    
     try {
       const response = await fetch('/api/validate-repo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: currentUrl, branch: currentBranch }),
+        body: JSON.stringify({ repoUrl, branch }),
       });
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);
       }
-      // If successful, clear both errors
       setRepoUrlError(null);
       setBranchError(null);
     } catch (e: any) {
       const errorMsg = e.message || 'An unknown error occurred.';
       if (errorMsg.toLowerCase().includes('branch')) {
         setBranchError(errorMsg);
-        setRepoUrlError(null); // Clear repo error if branch is the issue
+        setRepoUrlError(null);
       } else {
         setRepoUrlError(errorMsg);
-        setBranchError(null); // Clear branch error if repo is the issue
+        setBranchError(null);
       }
     } finally {
       setIsUrlValidating(false);
@@ -103,6 +102,7 @@ export default function ChangelogGenerator() {
 
 
   const handleFetchCommits = async () => {
+    await handleBlur();
     if (repoUrlError || branchError) return;
 
     if (!repoUrl || !branch || !startDate || !endDate) {
@@ -271,13 +271,13 @@ export default function ChangelogGenerator() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="repoUrl" className="flex items-center gap-2"><Globe className="h-4 w-4 text-primary" />Repository URL</Label>
-              <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repoUrl')} />
+              <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={handleBlur} />
                {(isUrlValidating || isBranchValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
                {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="branch" className="flex items-center gap-2"><History className="h-4 w-4 text-primary" />Branch to Analyze</Label>
-              <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')}/>
+              <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={handleBlur}/>
                {branchError && <p className="text-xs text-destructive">{branchError}</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -168,7 +169,7 @@ export default function DocumentationGenerator() {
       setBranchError(null);
     } catch (e: any) {
       const errorMsg = e.message || 'An unknown error occurred.';
-      if (errorMsg.toLowerCase().includes('branch')) {
+      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('not found')) {
         setBranchError(errorMsg);
         setRepoUrlError(null);
       } else {
@@ -220,28 +221,32 @@ export default function DocumentationGenerator() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (isGenerating || repoUrlError || branchError) return;
+    if (isGenerating) return;
+    
+    // Manually trigger validation before submitting
+    validateField('repo').then(() => {
+        validateField('branch').then(() => {
+            const hasError = !!repoUrlError || !!branchError;
+            const formIsValid = formRef.current?.checkValidity();
 
-    if (documentation) {
-      setShowConfirmationDialog(true);
-    } else {
-      startGeneration();
-    }
+            if (hasError || !formIsValid) {
+                if (!repoUrl) setRepoUrlError('Repository URL is required.');
+                if (!branch) setBranchError('Branch or tag is required.');
+                formRef.current?.reportValidity();
+                return;
+            }
+
+            if (documentation) {
+                setShowConfirmationDialog(true);
+            } else {
+                startGeneration();
+            }
+        });
+    });
   };
 
   const startGeneration = async () => {
     setShowConfirmationDialog(false);
-    
-    // Manually trigger validation before submitting
-    await validateField('repo');
-    await validateField('branch');
-
-    if (!formRef.current?.checkValidity() || repoUrlError || branchError) {
-        if (!repoUrl) setRepoUrlError('Repository URL is required.');
-        if (!branch) setBranchError('Branch or tag is required.');
-        formRef.current?.reportValidity();
-        return;
-    }
     
     setIsGenerating(true);
     setDocumentation(null);
@@ -441,7 +446,7 @@ export default function DocumentationGenerator() {
                                        {badge.icon && <badge.icon className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
                                        <Input
                                           placeholder={`Your ${badge.label} username`}
-                                          required
+                                          required={selectedBadges.includes(badge.value)}
                                           value={badge.id === 'buymeacoffee' ? buyMeACoffeeUsername : twitterUsername}
                                           onChange={e => badge.id === 'buymeacoffee' ? setBuyMeACoffeeUsername(e.target.value) : setTwitterUsername(e.target.value)}
                                           className="h-8 pl-6"
@@ -450,6 +455,10 @@ export default function DocumentationGenerator() {
                                 )}
                               </div>
                           ))}
+                      </div>
+                      <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <p>Usernames for Buy Me A Coffee & Twitter are not verified. Please ensure they are correct.</p>
                       </div>
                       <Separator/>
                       <div className="space-y-2">
@@ -636,3 +645,5 @@ export default function DocumentationGenerator() {
     </div>
   );
 }
+
+    

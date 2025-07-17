@@ -898,5 +898,3 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
-
-    

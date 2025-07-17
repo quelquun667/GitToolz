@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2, Image as ImageIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search, CheckCircle2, ImageIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,8 +42,6 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from './ui/command';
 import { cn } from '@/lib/utils';
 
 
@@ -146,6 +144,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [imagePosition, setImagePosition] = useState<'top' | 'bottom'>('top');
   const [repoImages, setRepoImages] = useState<string[]>([]);
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+  const [tempSelectedImage, setTempSelectedImage] = useState<string>('');
 
 
   // Badge State
@@ -539,6 +538,10 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
         </div>
     );
   };
+
+  const getRawImageUrl = (repoPath: string, branch: string, imageFilePath: string) => {
+    return `https://raw.githubusercontent.com/${repoPath}/${branch}/${imageFilePath}`;
+  };
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -663,42 +666,52 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                   {imageSource === 'repo' && (
                     <div className="space-y-2">
                       <Label htmlFor="imagePath">Image Path</Label>
-                       <Popover open={isImageSelectorOpen} onOpenChange={setIsImageSelectorOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={isImageSelectorOpen}
-                            className="w-full justify-between"
-                          >
-                            {imagePath ? imagePath : "Select image..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <Dialog open={isImageSelectorOpen} onOpenChange={setIsImageSelectorOpen}>
+                        <DialogTrigger asChild>
+                           <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            {imagePath || "Select image from repository..."}
                           </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
-                          <Command>
-                            <CommandInput placeholder="Search images..." />
-                            <CommandEmpty>No image found.</CommandEmpty>
-                            <CommandGroup>
-                              <ScrollArea className="h-48">
-                                {repoImages.map((path) => (
-                                  <CommandItem
-                                    key={path}
-                                    value={path}
-                                    onSelect={() => {
-                                      setImagePath(path === imagePath ? "" : path);
-                                      setIsImageSelectorOpen(false);
-                                    }}
-                                  >
-                                    <Check className={cn("mr-2 h-4 w-4", imagePath === path ? "opacity-100" : "opacity-0")}/>
-                                    {path}
-                                  </CommandItem>
-                                ))}
-                              </ScrollArea>
-                            </CommandGroup>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Select Repository Image</DialogTitle>
+                            <DialogDescription>Click on an image to select it.</DialogDescription>
+                          </DialogHeader>
+                          <ScrollArea className="h-96">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                              {repoImages.map((path) => (
+                                <div
+                                  key={path}
+                                  onClick={() => setTempSelectedImage(path)}
+                                  className={cn(
+                                    "cursor-pointer rounded-lg border-2 p-2 hover:border-primary",
+                                    tempSelectedImage === path ? "border-primary bg-primary/10" : "border-transparent"
+                                  )}
+                                >
+                                  <div className="relative aspect-video w-full">
+                                    <Image
+                                      src={getRawImageUrl(repoPath, branch, path)}
+                                      alt={`Preview of ${path}`}
+                                      layout="fill"
+                                      objectFit="contain"
+                                      className="rounded-md"
+                                      unoptimized
+                                    />
+                                  </div>
+                                  <p className="mt-2 text-xs text-center truncate font-mono">{path}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsImageSelectorOpen(false)}>Cancel</Button>
+                             <Button onClick={() => {
+                              setImagePath(tempSelectedImage);
+                              setIsImageSelectorOpen(false);
+                            }}>Done</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   )}
                   {imageSource !== 'none' && (
@@ -885,3 +898,5 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
+
+    

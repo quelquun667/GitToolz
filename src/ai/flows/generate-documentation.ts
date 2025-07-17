@@ -11,7 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-import { getRepoTree, getRepoFileContent } from '@/services/github';
+import { getRepoFileContent } from '@/services/github';
 
 const GenerateDocumentationInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
@@ -24,7 +24,7 @@ const GenerateDocumentationInputSchema = z.object({
   discordInviteCode: z.string().optional().describe('The invite code for the Discord server badge.'),
   linkedinProfile: z.string().optional().describe('The profile path for the LinkedIn badge (e.g., in/your-name).'),
   customInstructions: z.string().optional().describe('Custom instructions to guide the AI in generating the documentation.'),
-  fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
+  fileTree: z.string().describe('The file tree of the repository, provided as a string.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.'),
   imageSource: z.enum(['none', 'url', 'repo']).optional().describe("The source for the project image, if any. Can be 'url' or 'repo'."),
   imageUrl: z.string().url().optional().describe("URL of the project image, if source is 'url'."),
@@ -35,7 +35,6 @@ export type GenerateDocumentationInput = z.infer<typeof GenerateDocumentationInp
 
 const GenerateDocumentationOutputSchema = z.object({
   status: z.string().optional().describe('The current status of the generation process.'),
-  fileTree: z.array(z.string()).optional().describe('The file tree of the repository.'),
   documentation: z.string().optional().describe('The final generated documentation for the repository.'),
   error: z.string().optional().describe('An error message if something went wrong.'),
 });
@@ -153,14 +152,9 @@ export async function* generateDocumentation(
     yield { status: 'Initializing documentation generation...' };
     yield { status: `Analyzing repository: ${input.repoUrl}` };
     
-    yield { status: 'Fetching file tree from GitHub...' };
-    const tree = await getRepoTree(input.repoUrl, input.branch);
-    const filePaths = tree.map(file => file.path);
-    yield { status: 'File tree fetched successfully.', fileTree: filePaths };
-
+    const filePaths = input.fileTree.split('\n');
     const fileContents: Record<string, string> = {};
-    const filesToRead = tree
-      .map(file => file.path)
+    const filesToRead = filePaths
       .filter(path => KEY_FILES_TO_READ.some(keyFile => path.toLowerCase().endsWith(keyFile.toLowerCase())));
       
     for (const filePath of filesToRead) {
@@ -176,8 +170,7 @@ export async function* generateDocumentation(
     }
 
     yield { status: 'Generating content with AI...' };
-    const fileTreeString = filePaths.join('\n');
-    const { output } = await generateDocumentationPrompt({...input, fileTree: fileTreeString, fileContents});
+    const { output } = await generateDocumentationPrompt({...input, fileContents});
     
     if (!output?.documentation) {
       throw new Error('AI failed to generate documentation content.');

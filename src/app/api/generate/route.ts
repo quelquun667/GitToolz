@@ -3,16 +3,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, branch, sections, badges, badgePosition, buyMeACoffeeUsername, twitterUsername, discordInviteCode, linkedinProfile, customInstructions, imageSource, imageUrl, imagePath, imagePosition } = await request.json();
+    const { repoUrl, branch, sections, badges, badgePosition, buyMeACoffeeUsername, twitterUsername, discordInviteCode, linkedinProfile, customInstructions, imageSource, imageUrl, imagePath, imagePosition, fileTree } = await request.json();
 
-    if (!repoUrl || !branch || !sections) {
+    if (!repoUrl || !branch || !sections || !fileTree) {
       return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const stream = await streamDocsAction({ repoUrl, branch, sections, badges, badgePosition, buyMeACoffeeUsername, twitterUsername, discordInviteCode, linkedinProfile, customInstructions, imageSource, imageUrl, imagePath, imagePosition });
+    const stream = await streamDocsAction({ repoUrl, branch, sections, badges, badgePosition, buyMeACoffeeUsername, twitterUsername, discordInviteCode, linkedinProfile, customInstructions, imageSource, imageUrl, imagePath, imagePosition, fileTree });
 
     return new Response(stream, {
       headers: {

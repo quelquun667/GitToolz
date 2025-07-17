@@ -3,7 +3,7 @@
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
-import { getRepoBranches, getRepoCommitsByDate, validateRepo as validateRepoService } from '@/services/github';
+import { getRepoBranches, getRepoCommitsByDate, getRepoTree as getRepoTreeService, validateRepo as validateRepoService } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -21,6 +21,7 @@ const docFormSchema = z.object({
   imageUrl: z.string().url({ message: 'Please enter a valid image URL.' }).optional().or(z.literal('')),
   imagePath: z.string().optional(),
   imagePosition: z.enum(['top', 'bottom']).optional(),
+  fileTree: z.string().optional(), // Adding fileTree to the Zod schema
 });
 
 const fetchCommitsSchema = z.object({
@@ -37,6 +38,28 @@ const changelogFormSchema = z.object({
 const validateRepoSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
 });
+
+const fetchTreeSchema = z.object({
+  repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }),
+  branch: z.string().min(1, { message: 'Branch is required.' }),
+});
+
+export async function getRepoTree(
+  input: z.infer<typeof fetchTreeSchema>
+): Promise<{ tree?: string[]; error?: string }> {
+  const validatedFields = fetchTreeSchema.safeParse(input);
+  if (!validatedFields.success) {
+    return { error: 'Invalid input.' };
+  }
+  try {
+    const tree = await getRepoTreeService(validatedFields.data.repoUrl, validatedFields.data.branch);
+    const filePaths = tree.map(file => file.path);
+    return { tree: filePaths };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+    return { error };
+  }
+}
 
 export async function validateRepo(
   input: z.infer<typeof validateRepoSchema>
@@ -106,7 +129,7 @@ export async function fetchCommitsAction(
 
 
 export async function streamDocsAction(
-  input: Omit<GenerateDocumentationInput, 'fileTree' | 'fileContents'>
+  input: Omit<GenerateDocumentationInput, 'fileContents'>
 ): Promise<ReadableStream> {
 
   const validatedFields = docFormSchema.safeParse(input);

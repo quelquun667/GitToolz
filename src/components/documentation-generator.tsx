@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, Star, Search } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -173,7 +173,7 @@ export default function DocumentationGenerator() {
     setRepoUrlError(null);
   }
 
-  const handleUrlBlur = async () => {
+  const handleValidateRepo = async () => {
     setIsRepoValid(false);
     setRepoUrlError(null);
     setBranches([]);
@@ -401,7 +401,7 @@ export default function DocumentationGenerator() {
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
-  const isSubmitDisabled = !isRepoValid || !repoUrl || !branch || !!repoUrlError || isUrlValidating || isFetchingBranches;
+  const isGenerateDisabled = !isRepoValid || !repoUrl || !branch || !!repoUrlError || isUrlValidating || isFetchingBranches;
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -440,24 +440,28 @@ export default function DocumentationGenerator() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={handleUrlChange} onBlur={handleUrlBlur} />
-                  {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating...</p>}
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={handleUrlChange} />
                   {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="branch" className="flex items-center gap-2">
-                    <GitBranch className="h-4 w-4 text-primary" />
-                    Branch / Tag
-                  </Label>
-                  <Select onValueChange={setBranch} value={branch} disabled={isFetchingBranches || branches.length === 0}>
-                      <SelectTrigger>
-                          <SelectValue placeholder={isFetchingBranches ? "Fetching branches..." : "Select a branch"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-                </div>
+                <Button onClick={handleValidateRepo} type="button" className="w-full" disabled={isUrlValidating || !repoUrl}>
+                  {isUrlValidating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Checking...</> : <><Search className="mr-2 h-4 w-4" />Check Repository</>}
+                </Button>
+                {isRepoValid && (
+                  <div className="space-y-2">
+                    <Label htmlFor="branch" className="flex items-center gap-2">
+                      <GitBranch className="h-4 w-4 text-primary" />
+                      Branch / Tag
+                    </Label>
+                    <Select onValueChange={setBranch} value={branch} disabled={isFetchingBranches || branches.length === 0}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={isFetchingBranches ? "Fetching branches..." : "Select a branch"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -601,7 +605,7 @@ export default function DocumentationGenerator() {
                 </CardContent>
               </Card>
               
-              <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isSubmitDisabled} />
+              <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
             </>
           )}
         </form>
@@ -756,11 +760,14 @@ export default function DocumentationGenerator() {
           </Card>
         ) : (
           <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center">
+            <div className="text-center p-4">
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No Documentation Generated</h3>
+              <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Enter a repository URL and branch to generate documentation.
+                {!isRepoValid
+                  ? "Enter a repository URL and check it to begin."
+                  : "Configure your options and generate the documentation."
+                }
               </p>
             </div>
           </div>

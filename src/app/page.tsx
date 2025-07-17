@@ -11,7 +11,7 @@ export default function Home() {
     <div className="min-h-screen bg-background text-foreground p-4">
       <header className="flex items-center justify-center gap-3 mb-4">
         <FileCode2 className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">GitTools</h1>
+        <h1 className="text-3xl font-bold">GitToolz</h1>
       </header>
       <Tabs defaultValue="documentation" className="w-full max-w-7xl mx-auto">
         <div className="flex justify-center">

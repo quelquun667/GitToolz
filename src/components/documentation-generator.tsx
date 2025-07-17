@@ -62,17 +62,17 @@ type BadgeOption = {
 };
 
 const BADGE_OPTIONS: BadgeOption[] = [
-    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/quelquun667/GitDocs' },
-    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/quelquun667/GitDocs' },
-    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/quelquun667/GitDocs' },
-    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/quelquun667/GitDocs' },
-    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitCommit, previewUrl: 'https://img.shields.io/github/last-commit/quelquun667/GitDocs' },
-    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: Database, previewUrl: 'https://img.shields.io/github/repo-size/quelquun667/GitDocs' },
+    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/quelquun667/GitToolz' },
+    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/quelquun667/GitToolz' },
+    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/quelquun667/GitToolz' },
+    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/quelquun667/GitToolz' },
+    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitCommit, previewUrl: 'https://img.shields.io/github/last-commit/quelquun667/GitToolz' },
+    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: Database, previewUrl: 'https://img.shields.io/github/repo-size/quelquun667/GitToolz' },
     { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', icon: Coffee, previewUrl: 'https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black', placeholder: 'your-username', inputLabel: 'Buy Me A Coffee Username', inputType: 'text'},
     { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
     { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
     { id: 'linkedin', label: 'LinkedIn', value: 'LinkedIn', icon: Linkedin, previewUrl: 'https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white', placeholder: 'in/your-profile-name', inputLabel: 'LinkedIn Profile Path (e.g., in/your-name)', inputType: 'text'},
-    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://starchart.cc/quelquun667/GitDocs.svg' },
+    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://starchart.cc/quelquun667/GitToolz.svg' },
 ];
 
 
@@ -200,12 +200,12 @@ export default function DocumentationGenerator() {
       setBranchError(null);
     } catch (e: any) {
       const errorMsg = e.message || 'An unknown error occurred.';
-      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('tag')) {
-        setBranchError(errorMsg);
-        setRepoUrlError(null);
-      } else {
+      if (errorMsg.includes('Repository')) {
         setRepoUrlError(errorMsg);
         setBranchError(null);
+      } else {
+        setBranchError(errorMsg);
+        setRepoUrlError(null);
       }
     } finally {
       setIsUrlValidating(false);

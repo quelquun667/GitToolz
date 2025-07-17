@@ -71,8 +71,8 @@ const BADGE_OPTIONS: BadgeOption[] = [
     { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: GitBranch, previewUrl: 'https://img.shields.io/github/repo-size/quelquun667/GitToolz' },
     { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://api.star-history.com/svg?repos=quelquun667/GitToolz&type=Date' },
     { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', icon: Coffee, previewUrl: 'https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black', placeholder: 'your-username', inputLabel: 'Buy Me A Coffee Username', inputType: 'text'},
-    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
-    { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
+    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/QuelquunMe?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
+    { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/W3Qtess2m5?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
     { id: 'linkedin', label: 'LinkedIn', value: 'LinkedIn', icon: Linkedin, previewUrl: 'https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white', placeholder: 'in/your-profile-name', inputLabel: 'LinkedIn Profile Path (e.g., in/your-name)', inputType: 'text'},
 ];
 

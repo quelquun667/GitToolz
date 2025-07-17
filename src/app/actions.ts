@@ -14,6 +14,8 @@ const docFormSchema = z.object({
   badgePosition: z.enum(['top', 'bottom']).optional(),
   buyMeACoffeeUsername: z.string().optional(),
   twitterUsername: z.string().optional(),
+  discordInviteCode: z.string().optional(),
+  linkedinProfile: z.string().optional(),
 });
 
 const fetchCommitsSchema = z.object({

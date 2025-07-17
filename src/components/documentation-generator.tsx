@@ -130,30 +130,30 @@ export default function DocumentationGenerator() {
     return headingLines.map(line => line.replace(/^##\s/, ''));
   }, [editedDocumentation]);
 
-  const handleBlur = async () => {
+  const validateField = async (field: 'repo' | 'branch') => {
     setRepoUrlError(null);
     setBranchError(null);
 
     if (!repoUrl) {
-        setRepoUrlError('Repository URL is required.');
-        return;
+      if (field === 'repo') setRepoUrlError('Repository URL is required.');
+      return;
     }
     try {
-        new URL(repoUrl);
-        if (!repoUrl.includes('github.com')) throw new Error();
+      new URL(repoUrl);
+      if (!repoUrl.includes('github.com')) throw new Error();
     } catch {
-        setRepoUrlError('Please enter a valid GitHub URL.');
-        return;
+      if (field === 'repo') setRepoUrlError('Please enter a valid GitHub URL.');
+      return;
     }
-    
+
     if (!branch) {
-        setBranchError('Branch or tag is required.');
-        return;
+      if (field === 'branch') setBranchError('Branch or tag is required.');
+      return;
     }
 
     setIsUrlValidating(true);
     setIsBranchValidating(true);
-    
+
     try {
       const response = await fetch('/api/validate-repo', {
         method: 'POST',
@@ -162,7 +162,7 @@ export default function DocumentationGenerator() {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.error);
+        throw new Error(result.error || 'Validation failed.');
       }
       setRepoUrlError(null);
       setBranchError(null);
@@ -180,6 +180,7 @@ export default function DocumentationGenerator() {
       setIsBranchValidating(false);
     }
   };
+
 
   const handleCopy = () => {
     if (editedDocumentation === null) return;
@@ -230,7 +231,11 @@ export default function DocumentationGenerator() {
 
   const startGeneration = async () => {
     setShowConfirmationDialog(false);
-    await handleBlur();
+    
+    // Manually trigger validation before submitting
+    await validateField('repo');
+    await validateField('branch');
+
     if (!formRef.current?.checkValidity() || repoUrlError || branchError) {
         if (!repoUrl) setRepoUrlError('Repository URL is required.');
         if (!branch) setBranchError('Branch or tag is required.');
@@ -359,8 +364,8 @@ export default function DocumentationGenerator() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={handleBlur} />
-                  {(isUrlValidating || isBranchValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repo')} />
+                  {(isUrlValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
                   {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
                 <div className="space-y-2">
@@ -368,7 +373,8 @@ export default function DocumentationGenerator() {
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branch / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={handleBlur} />
+                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')} />
+                  {(isBranchValidating && !isUrlValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating branch...</p>}
                   {branchError && <p className="text-xs text-destructive">{branchError}</p>}
                 </div>
               </div>
@@ -435,6 +441,7 @@ export default function DocumentationGenerator() {
                                        {badge.icon && <badge.icon className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
                                        <Input
                                           placeholder={`Your ${badge.label} username`}
+                                          required
                                           value={badge.id === 'buymeacoffee' ? buyMeACoffeeUsername : twitterUsername}
                                           onChange={e => badge.id === 'buymeacoffee' ? setBuyMeACoffeeUsername(e.target.value) : setTwitterUsername(e.target.value)}
                                           className="h-8 pl-6"

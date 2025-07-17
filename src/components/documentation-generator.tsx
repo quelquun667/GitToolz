@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,8 +45,8 @@ const BADGE_OPTIONS = [
     { id: 'issues', label: 'Issues', value: 'Issues' },
     { id: 'forks', label: 'Forks', value: 'Forks' },
     { id: 'license', label: 'License', value: 'License' },
-    { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee' },
-    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter' },
+    { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', requiresInput: true, icon: Coffee },
+    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', requiresInput: true, icon: Twitter },
 ];
 
 
@@ -101,6 +101,8 @@ export default function DocumentationGenerator() {
   const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
   const [badgePosition, setBadgePosition] = useState<'top' | 'bottom'>('top');
   const [isBadgesOpen, setIsBadgesOpen] = useState(false);
+  const [buyMeACoffeeUsername, setBuyMeACoffeeUsername] = useState('');
+  const [twitterUsername, setTwitterUsername] = useState('');
 
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
@@ -185,7 +187,15 @@ export default function DocumentationGenerator() {
       const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl, branch, sections: selectedSections, badges: selectedBadges, badgePosition }),
+          body: JSON.stringify({
+            repoUrl,
+            branch,
+            sections: selectedSections,
+            badges: selectedBadges,
+            badgePosition,
+            buyMeACoffeeUsername,
+            twitterUsername
+          }),
       });
 
       if (!response.body) {
@@ -343,9 +353,10 @@ export default function DocumentationGenerator() {
                 </div>
                  <CardDescription>Include and configure badges for your project.</CardDescription>
                   <CollapsibleContent className="space-y-4 pt-4">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-4">
                           {BADGE_OPTIONS.map((badge) => (
-                              <div key={badge.id} className="flex items-center space-x-2">
+                              <div key={badge.id} className="space-y-2">
+                                <div className="flex items-center space-x-2">
                                   <Checkbox
                                       id={badge.id}
                                       value={badge.value}
@@ -353,6 +364,18 @@ export default function DocumentationGenerator() {
                                       onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
                                   />
                                   <Label htmlFor={badge.id} className="font-normal text-sm">{badge.label}</Label>
+                                </div>
+                                {badge.requiresInput && selectedBadges.includes(badge.value) && (
+                                    <div className="relative pl-6">
+                                       {badge.icon && <badge.icon className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
+                                       <Input
+                                          placeholder={`Your ${badge.label} username`}
+                                          value={badge.id === 'buymeacoffee' ? buyMeACoffeeUsername : twitterUsername}
+                                          onChange={e => badge.id === 'buymeacoffee' ? setBuyMeACoffeeUsername(e.target.value) : setTwitterUsername(e.target.value)}
+                                          className="h-8 pl-6"
+                                       />
+                                    </div>
+                                )}
                               </div>
                           ))}
                       </div>

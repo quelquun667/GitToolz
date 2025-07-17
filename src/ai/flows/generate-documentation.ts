@@ -18,6 +18,8 @@ const GenerateDocumentationInputSchema = z.object({
   sections: z.array(z.string()).describe('A list of sections to include in the documentation.'),
   badges: z.array(z.string()).optional().describe('A list of specific GitHub badges to include.'),
   badgePosition: z.enum(['top', 'bottom']).optional().default('top').describe('The position of the badges in the document.'),
+  buyMeACoffeeUsername: z.string().optional().describe('The username for the Buy Me A Coffee badge.'),
+  twitterUsername: z.string().optional().describe('The username for the Twitter badge.'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
 });
@@ -82,8 +84,8 @@ const generateDocumentationPrompt = ai.definePrompt({
   - Issues: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues)
   - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
   - License: [![GitHub license](https://img.shields.io/github/license/user/repo)](https://github.com/user/repo/blob/main/LICENSE)
-  - Buy Me A Coffee: [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-yellow.svg)](https://www.buymeacoffee.com/your-username) (Use 'your-username' as a placeholder)
-  - Twitter: [![Twitter Follow](https://img.shields.io/twitter/follow/your-username?style=social)](https://twitter.com/your-username) (Use 'your-username' as a placeholder)
+  - Buy Me A Coffee: [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-yellow.svg)](https://www.buymeacoffee.com/{{#if buyMeACoffeeUsername}}{{buyMeACoffeeUsername}}{{else}}your-username{{/if}})
+  - Twitter: [![Twitter Follow](https://img.shields.io/twitter/follow/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}}?style=social)](https://twitter.com/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}})
   {{/if}}
 
   Use clear and concise language. Format code blocks appropriately for markdown.

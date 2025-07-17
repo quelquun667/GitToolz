@@ -559,7 +559,8 @@ export default function DocumentationGenerator() {
                         <Separator orientation='vertical' className="h-auto hidden md:block" />
                         <Separator className="block md:hidden"/>
                         <div className="w-full md:w-1/2">
-                           <h4 className="font-medium text-foreground mb-4">Available Items</h4>
+                           <h4 className="font-medium text-foreground">Available Items</h4>
+                           <p className="text-xs text-muted-foreground mb-4">Previews use an example repository. Yours will be generated dynamically.</p>
                            <ScrollArea className="h-72">
                              <div className="space-y-4 pr-4">
                                 {BADGE_OPTIONS.map((badge) => (

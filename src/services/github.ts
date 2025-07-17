@@ -74,8 +74,6 @@ export async function getRepoFileContent(repoUrl: string, branch: string, path: 
             },
         });
         
-        // The 'raw' media type returns the content directly as a string for text files.
-        // For other types it might be an object, so we check if it's a string.
         if (typeof data === 'string') {
             return data;
         }
@@ -83,24 +81,24 @@ export async function getRepoFileContent(repoUrl: string, branch: string, path: 
 
     } catch (error) {
         console.error(`Failed to fetch content for file ${path}:`, error);
-        // We return null instead of throwing an error so the whole process doesn't fail
-        // if one file is unreadable.
         return null; 
     }
 }
 
-export async function getRepoCommits(repoUrl: string, startRef: string, endRef: string): Promise<{sha: string, message: string, author: string | null}[]> {
+export async function getRepoCommitsByDate(repoUrl: string, branch: string, startDate: string, endDate: string): Promise<{sha: string, message: string, author: string | null}[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
-        const { data } = await octokit.rest.repos.compareCommits({
+        const { data } = await octokit.rest.repos.listCommits({
             owner,
             repo,
-            base: startRef,
-            head: endRef,
+            sha: branch,
+            since: startDate,
+            until: endDate,
+            per_page: 100, // Max commits to fetch
         });
 
-        if (data.commits) {
-            return data.commits.map(commit => ({
+        if (data) {
+            return data.map(commit => ({
                 sha: commit.sha,
                 message: commit.commit.message,
                 author: commit.author?.login ?? 'Unknown',
@@ -110,7 +108,7 @@ export async function getRepoCommits(repoUrl: string, startRef: string, endRef: 
         return [];
     } catch(error: any) {
         if (error.status === 404) {
-            throw new Error(`Could not find one or both of the specified tags/branches: "${startRef}" or "${endRef}".`);
+            throw new Error(`Could not find the specified branch: "${branch}".`);
         }
          if (error.status === 401) {
             throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
@@ -119,3 +117,5 @@ export async function getRepoCommits(repoUrl: string, startRef: string, endRef: 
         throw new Error('Failed to fetch commits from GitHub.');
     }
 }
+
+    

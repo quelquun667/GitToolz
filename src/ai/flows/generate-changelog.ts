@@ -10,12 +10,13 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { getRepoCommits } from '@/services/github';
+import { getRepoCommitsByDate } from '@/services/github';
 
 const GenerateChangelogInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
-  startRef: z.string().describe('The starting tag, branch, or commit hash.'),
-  endRef: z.string().describe('The ending tag, branch, or commit hash.'),
+  branch: z.string().describe('The branch to analyze.'),
+  startDate: z.string().describe('The starting date for the changelog.'),
+  endDate: z.string().describe('The ending date for the changelog.'),
 });
 export type GenerateChangelogInput = z.infer<typeof GenerateChangelogInputSchema>;
 
@@ -74,11 +75,11 @@ export async function* generateChangelog(
 ): AsyncGenerator<GenerateChangelogOutput> {
   try {
     yield { status: 'Initializing changelog generation...' };
-    yield { status: `Fetching commits for ${input.repoUrl} from ${input.startRef} to ${input.endRef}...` };
+    yield { status: `Fetching commits for ${input.repoUrl} on branch '${input.branch}'...` };
     
-    const commits = await getRepoCommits(input.repoUrl, input.startRef, input.endRef);
+    const commits = await getRepoCommitsByDate(input.repoUrl, input.branch, input.startDate, input.endDate);
     if (commits.length === 0) {
-        throw new Error('No commits found between the specified references. The start and end points may be the same.');
+        throw new Error('No commits found in the specified date range.');
     }
 
     yield { status: `Found ${commits.length} commits to analyze.` };
@@ -100,3 +101,5 @@ export async function* generateChangelog(
     yield { error };
   }
 }
+
+    

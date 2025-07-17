@@ -3,16 +3,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, startRef, endRef } = await request.json();
+    const { repoUrl, branch, startDate, endDate } = await request.json();
 
-    if (!repoUrl || !startRef || !endRef) {
+    if (!repoUrl || !branch || !startDate || !endDate) {
       return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const stream = await streamChangelogAction({ repoUrl, startRef, endRef });
+    const stream = await streamChangelogAction({ repoUrl, branch, startDate, endDate });
 
     return new Response(stream, {
       headers: {
@@ -30,3 +30,5 @@ export async function POST(request: Request) {
     });
   }
 }
+
+    

@@ -4,13 +4,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Image from 'next/image';
 import { summarizeAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, GitCommit, Database, Code } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,12 +25,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
-import { Switch } from './ui/switch';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Switch } from './ui/switch';
 
 
 const DOC_SECTIONS = [
@@ -41,13 +50,28 @@ const DOC_SECTIONS = [
   { id: 'usage', label: 'Usage / Getting Started', value: 'Usage / Getting Started' },
 ];
 
-const BADGE_OPTIONS = [
-    { id: 'stars', label: 'Stars', value: 'Stars' },
-    { id: 'issues', label: 'Issues', value: 'Issues' },
-    { id: 'forks', label: 'Forks', value: 'Forks' },
-    { id: 'license', label: 'License', value: 'License' },
-    { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', requiresInput: true, icon: Coffee },
-    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', requiresInput: true, icon: Twitter },
+type BadgeOption = {
+  id: string;
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  previewUrl: string;
+  placeholder?: string;
+  inputType?: 'text' | 'url';
+  inputLabel?: string;
+};
+
+const BADGE_OPTIONS: BadgeOption[] = [
+    { id: 'stars', label: 'Stars', value: 'Stars', icon: Sparkles, previewUrl: 'https://img.shields.io/github/stars/user/repo' },
+    { id: 'issues', label: 'Issues', value: 'Issues', icon: Info, previewUrl: 'https://img.shields.io/github/issues/user/repo' },
+    { id: 'forks', label: 'Forks', value: 'Forks', icon: GitBranch, previewUrl: 'https://img.shields.io/github/forks/user/repo' },
+    { id: 'license', label: 'License', value: 'License', icon: FileText, previewUrl: 'https://img.shields.io/github/license/user/repo' },
+    { id: 'lastCommit', label: 'Last Commit', value: 'Last Commit', icon: GitCommit, previewUrl: 'https://img.shields.io/github/last-commit/user/repo' },
+    { id: 'repoSize', label: 'Repo Size', value: 'Repo Size', icon: Database, previewUrl: 'https://img.shields.io/github/repo-size/user/repo' },
+    { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee', icon: Coffee, previewUrl: 'https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black', placeholder: 'your-username', inputLabel: 'Buy Me A Coffee Username', inputType: 'text'},
+    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
+    { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
+    { id: 'linkedin', label: 'LinkedIn', value: 'LinkedIn', icon: Linkedin, previewUrl: 'https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white', placeholder: 'in/your-profile-name', inputLabel: 'LinkedIn Profile Path (e.g., in/your-name)', inputType: 'text'},
 ];
 
 
@@ -99,12 +123,16 @@ export default function DocumentationGenerator() {
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
   const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
+  
+  // Badge State
   const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
   const [badgePosition, setBadgePosition] = useState<'top' | 'bottom'>('top');
-  const [isBadgesOpen, setIsBadgesOpen] = useState(false);
   const [buyMeACoffeeUsername, setBuyMeACoffeeUsername] = useState('');
   const [twitterUsername, setTwitterUsername] = useState('');
-  
+  const [discordInviteCode, setDiscordInviteCode] = useState('');
+  const [linkedinProfile, setLinkedinProfile] = useState('');
+  const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
+
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
   const [branchError, setBranchError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
@@ -218,6 +246,25 @@ export default function DocumentationGenerator() {
       checked ? [...prev, badgeValue] : prev.filter(b => b !== badgeValue)
     );
   };
+  
+  const getBadgeInputValue = (badgeId: string) => {
+    switch(badgeId) {
+      case 'buymeacoffee': return buyMeACoffeeUsername;
+      case 'twitter': return twitterUsername;
+      case 'discord': return discordInviteCode;
+      case 'linkedin': return linkedinProfile;
+      default: return '';
+    }
+  }
+
+  const setBadgeInputValue = (badgeId: string, value: string) => {
+    switch(badgeId) {
+      case 'buymeacoffee': setBuyMeACoffeeUsername(value); break;
+      case 'twitter': setTwitterUsername(value); break;
+      case 'discord': setDiscordInviteCode(value); break;
+      case 'linkedin': setLinkedinProfile(value); break;
+    }
+  }
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -265,7 +312,9 @@ export default function DocumentationGenerator() {
             badges: selectedBadges,
             badgePosition,
             buyMeACoffeeUsername,
-            twitterUsername
+            twitterUsername,
+            discordInviteCode,
+            linkedinProfile,
           }),
       });
 
@@ -412,71 +461,90 @@ export default function DocumentationGenerator() {
             </CardContent>
           </Card>
           
-           <Card className="shadow-lg">
+          <Card className="shadow-lg">
             <CardHeader>
-              <Collapsible open={isBadgesOpen} onOpenChange={setIsBadgesOpen} className='space-y-2'>
-                <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                        <BadgeIcon className="h-5 w-5" />
-                        Badges
-                    </CardTitle>
-                    <CollapsibleTrigger asChild>
-                        <Button variant='ghost' size='sm'>
-                            <ChevronDown className={cn("h-4 w-4 transition-transform", isBadgesOpen && "rotate-180")} />
-                            <span className="sr-only">Toggle Badge Options</span>
-                        </Button>
-                    </CollapsibleTrigger>
-                </div>
-                 <CardDescription>Include and configure badges for your project.</CardDescription>
-                  <CollapsibleContent className="space-y-4 pt-4">
-                      <div className="space-y-4">
-                          {BADGE_OPTIONS.map((badge) => (
-                              <div key={badge.id} className="space-y-2">
-                                <div className="flex items-center space-x-2">
+              <CardTitle>Badges</CardTitle>
+              <CardDescription>Configure and add badges to your documentation.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Dialog open={isBadgeDialogOpen} onOpenChange={setIsBadgeDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <BadgeIcon className="mr-2 h-4 w-4"/>
+                    Configure Badges ({selectedBadges.length} selected)
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Configure Badges</DialogTitle>
+                    <DialogDescription>
+                      Select badges to include, provide any required info, and choose their position.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-col md:flex-row gap-6 py-4">
+                    <div className="w-full md:w-1/2 space-y-4">
+                      <h4 className="font-medium text-foreground">Position</h4>
+                      <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                          <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="top" id="pos-top"/>
+                              <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                          </div>
+                            <div className="flex items-center space-x-2">
+                              <RadioGroupItem value="bottom" id="pos-bottom"/>
+                              <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                          </div>
+                      </RadioGroup>
+                       <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
+                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                        <p>Usernames, invite codes, and profile paths are not verified. Please ensure they are correct.</p>
+                      </div>
+                    </div>
+                    <Separator orientation='vertical' className="h-auto hidden md:block" />
+                    <Separator className="block md:hidden"/>
+                    <div className="w-full md:w-1/2">
+                       <h4 className="font-medium text-foreground mb-4">Available Badges</h4>
+                       <ScrollArea className="h-72">
+                         <div className="space-y-4 pr-4">
+                            {BADGE_OPTIONS.map((badge) => (
+                              <div key={badge.id}>
+                                <div className="flex items-center space-x-3">
                                   <Checkbox
-                                      id={badge.id}
-                                      value={badge.value}
-                                      checked={selectedBadges.includes(badge.value)}
-                                      onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
+                                    id={`badge-${badge.id}`}
+                                    value={badge.value}
+                                    checked={selectedBadges.includes(badge.value)}
+                                    onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
                                   />
-                                  <Label htmlFor={badge.id} className="font-normal text-sm">{badge.label}</Label>
-                                </div>
-                                {badge.requiresInput && selectedBadges.includes(badge.value) && (
-                                    <div className="relative pl-6">
-                                       {badge.icon && <badge.icon className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
-                                       <Input
-                                          placeholder={`Your ${badge.label} username`}
-                                          required={selectedBadges.includes(badge.value)}
-                                          value={badge.id === 'buymeacoffee' ? buyMeACoffeeUsername : twitterUsername}
-                                          onChange={e => badge.id === 'buymeacoffee' ? setBuyMeACoffeeUsername(e.target.value) : setTwitterUsername(e.target.value)}
-                                          className="h-8 pl-6"
-                                       />
+                                  <Label htmlFor={`badge-${badge.id}`} className="font-normal text-sm flex-1 cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                      <badge.icon className="h-4 w-4 text-muted-foreground" />
+                                      {badge.label}
                                     </div>
+                                  </Label>
+                                   <Image src={badge.previewUrl} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
+                                </div>
+                                {badge.inputLabel && selectedBadges.includes(badge.value) && (
+                                  <div className="relative pl-7 mt-2">
+                                    <Input
+                                        placeholder={badge.placeholder}
+                                        required={selectedBadges.includes(badge.value)}
+                                        value={getBadgeInputValue(badge.id)}
+                                        onChange={e => setBadgeInputValue(badge.id, e.target.value)}
+                                        className="h-8"
+                                    />
+                                  </div>
                                 )}
                               </div>
-                          ))}
-                      </div>
-                      <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
-                        <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                        <p>Usernames for Buy Me A Coffee & Twitter are not verified. Please ensure they are correct.</p>
-                      </div>
-                      <Separator/>
-                      <div className="space-y-2">
-                        <Label>Badge Position</Label>
-                         <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="top" id="pos-top"/>
-                                <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="bottom" id="pos-bottom"/>
-                                <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
-                            </div>
-                         </RadioGroup>
-                      </div>
-                  </CollapsibleContent>
-              </Collapsible>
-            </CardHeader>
+                            ))}
+                         </div>
+                       </ScrollArea>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={() => setIsBadgeDialogOpen(false)}>Done</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
           </Card>
           
           <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isSubmitDisabled} />
@@ -645,5 +713,3 @@ export default function DocumentationGenerator() {
     </div>
   );
 }
-
-    

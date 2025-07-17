@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 import { getRepoTree, getRepoFileContent } from '@/services/github';
 
 const GenerateDocumentationInputSchema = z.object({
@@ -20,6 +20,8 @@ const GenerateDocumentationInputSchema = z.object({
   badgePosition: z.enum(['top', 'bottom']).optional().default('top').describe('The position of the badges in the document.'),
   buyMeACoffeeUsername: z.string().optional().describe('The username for the Buy Me A Coffee badge.'),
   twitterUsername: z.string().optional().describe('The username for the Twitter badge.'),
+  discordInviteCode: z.string().optional().describe('The invite code for the Discord server badge.'),
+  linkedinProfile: z.string().optional().describe('The profile path for the LinkedIn badge (e.g., in/your-name).'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
 });
@@ -84,8 +86,12 @@ const generateDocumentationPrompt = ai.definePrompt({
   - Issues: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues)
   - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
   - License: [![GitHub license](https://img.shields.io/github/license/user/repo)](https://github.com/user/repo/blob/main/LICENSE)
+  - Last Commit: [![GitHub last commit](https://img.shields.io/github/last-commit/user/repo)](https://github.com/user/repo/commits/{{{branch}}})
+  - Repo Size: [![GitHub repo size](https://img.shields.io/github/repo-size/user/repo)](https://github.com/user/repo)
   - Buy Me A Coffee: [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/{{#if buyMeACoffeeUsername}}{{buyMeACoffeeUsername}}{{else}}your-username{{/if}})
   - Twitter: [![Follow on X](https://img.shields.io/twitter/follow/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}}?style=social)](https://x.com/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}})
+  - Discord: [![Discord](https://img.shields.io/discord/{{#if discordInviteCode}}{{discordInviteCode}}{{else}}your-invite-code{{/if}}?logo=discord&label=Discord)](https://discord.gg/{{#if discordInviteCode}}{{discordInviteCode}}{{else}}your-invite-code{{/if}})
+  - LinkedIn: [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/{{#if linkedinProfile}}{{linkedinProfile}}{{else}}in/your-profile{{/if}})
   {{/if}}
 
   Use clear and concise language. Format code blocks appropriately for markdown.

@@ -167,6 +167,8 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
+  
+  const isConfigurationDisabled = !branch;
 
   useEffect(() => {
     // Set default branch when branches are loaded
@@ -564,7 +566,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
             </CardContent>
           </Card>
           
-          <>
+          <fieldset className="space-y-6 disabled:opacity-60" disabled={isConfigurationDisabled}>
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -806,7 +808,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
             </Card>
             
             <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
-          </>
+          </fieldset>
         </form>
 
         {summary && !isGenerating && !isFinalizing && (
@@ -858,4 +860,3 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     </div>
   );
 }
-

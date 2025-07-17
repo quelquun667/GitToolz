@@ -85,7 +85,7 @@ const generateDocumentationPrompt = ai.definePrompt({
   - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
   - License: [![GitHub license](https://img.shields.io/github/license/user/repo)](https://github.com/user/repo/blob/main/LICENSE)
   - Buy Me A Coffee: [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/{{#if buyMeACoffeeUsername}}{{buyMeACoffeeUsername}}{{else}}your-username{{/if}})
-  - Twitter: [![Follow on X](https://img.shields.io/twitter/follow/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}}?style=social)](https://x.com/intent/follow?screen_name={{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}})
+  - Twitter: [![Follow on X](https://img.shields.io/twitter/follow/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}}?style=social)](https://x.com/{{#if twitterUsername}}{{twitterUsername}}{{else}}your-username{{/if}})
   {{/if}}
 
   Use clear and concise language. Format code blocks appropriately for markdown.

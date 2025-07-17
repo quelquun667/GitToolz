@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, GitCommit, Database, Code } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, GitCommit, Database, Code, PencilRuler } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -123,6 +123,8 @@ export default function DocumentationGenerator() {
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
   const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
+  const [customInstructions, setCustomInstructions] = useState('');
+  const MAX_INSTRUCTIONS_LENGTH = 500;
   
   // Badge State
   const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
@@ -315,6 +317,7 @@ export default function DocumentationGenerator() {
             twitterUsername,
             discordInviteCode,
             linkedinProfile,
+            customInstructions,
           }),
       });
 
@@ -458,6 +461,30 @@ export default function DocumentationGenerator() {
                   </Label>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <PencilRuler className="h-5 w-5" />
+                    Custom Instructions
+                </CardTitle>
+                <CardDescription>Provide specific instructions for the AI.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Textarea
+                    id="customInstructions"
+                    name="customInstructions"
+                    placeholder="e.g., 'Generate the documentation in a formal tone.' or 'Focus on the installation for beginners.'"
+                    value={customInstructions}
+                    onChange={(e) => setCustomInstructions(e.target.value)}
+                    maxLength={MAX_INSTRUCTIONS_LENGTH}
+                    className="min-h-[100px]"
+                />
+                <p className="text-xs text-muted-foreground text-right mt-2">
+                    {customInstructions.length} / {MAX_INSTRUCTIONS_LENGTH}
+                </p>
             </CardContent>
           </Card>
           

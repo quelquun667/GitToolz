@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, GitCommit, Database, Code, PencilRuler } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine, Coffee, Twitter, Info, MessageSquare, Linkedin, GitCommit, Database, Code, PencilRuler, Star } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -72,6 +72,7 @@ const BADGE_OPTIONS: BadgeOption[] = [
     { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
     { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
     { id: 'linkedin', label: 'LinkedIn', value: 'LinkedIn', icon: Linkedin, previewUrl: 'https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white', placeholder: 'in/your-profile-name', inputLabel: 'LinkedIn Profile Path (e.g., in/your-name)', inputType: 'text'},
+    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://starchart.cc/quelquun667/GitDocs.svg' },
 ];
 
 
@@ -482,7 +483,7 @@ export default function DocumentationGenerator() {
           
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>Badges</CardTitle>
+              <CardTitle>Badges & Visuals</CardTitle>
               <CardDescription>Configure and add badges to your documentation.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -495,9 +496,9 @@ export default function DocumentationGenerator() {
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Configure Badges</DialogTitle>
+                    <DialogTitle>Configure Badges & Visuals</DialogTitle>
                     <DialogDescription>
-                      Select badges to include, provide any required info, and choose their position.
+                      Select items to include, provide any required info, and choose their position.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex flex-col md:flex-row gap-6 py-4">
@@ -521,7 +522,7 @@ export default function DocumentationGenerator() {
                     <Separator orientation='vertical' className="h-auto hidden md:block" />
                     <Separator className="block md:hidden"/>
                     <div className="w-full md:w-1/2">
-                       <h4 className="font-medium text-foreground mb-4">Available Badges</h4>
+                       <h4 className="font-medium text-foreground mb-4">Available Items</h4>
                        <ScrollArea className="h-72">
                          <div className="space-y-4 pr-4">
                             {BADGE_OPTIONS.map((badge) => (
@@ -539,7 +540,7 @@ export default function DocumentationGenerator() {
                                       {badge.label}
                                     </div>
                                   </Label>
-                                   <Image src={badge.previewUrl} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
+                                   <Image src={badge.previewUrl} alt={`${badge.label} badge preview`} width={80} height={badge.id === 'starHistory' ? 40 : 20} unoptimized className="rounded-sm"/>
                                 </div>
                                 {badge.inputLabel && selectedBadges.includes(badge.value) && (
                                   <div className="relative pl-7 mt-2">

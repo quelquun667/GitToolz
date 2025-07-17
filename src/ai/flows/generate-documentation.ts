@@ -17,6 +17,7 @@ const GenerateDocumentationInputSchema = z.object({
   branch: z.string().describe('The branch or tag to generate documentation from.'),
   sections: z.array(z.string()).describe('A list of sections to include in the documentation.'),
   badges: z.array(z.string()).optional().describe('A list of specific GitHub badges to include.'),
+  badgePosition: z.enum(['top', 'bottom']).optional().default('top').describe('The position of the badges in the document.'),
   fileTree: z.string().optional().describe('The file tree of the repository, if fetched.'),
   fileContents: z.record(z.string()).optional().describe('A map of file paths to their content.')
 });
@@ -53,8 +54,25 @@ const generateDocumentationPrompt = ai.definePrompt({
 
   The documentation MUST be structured like a professional README.md file.
 
+  The final output MUST only contain the sections requested by the user. The sections should be in this order:
+  {{#each sections}}
+  - {{this}}
+  {{/each}}
+
+  If 'Table of Contents' is requested, it MUST be the first section. The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
+  
+  For each requested section, generate appropriate and comprehensive content based on the repository's file tree and the content of the key files provided.
+  - For **Project Overview**: Provide a brief introduction to the project.
+  - For **Features**: Create a bulleted list of key features.
+  - For **Prerequisites**: List what users need to have installed to run the project (e.g., Node.js, Python). Use files like 'package.json' or 'requirements.txt' to inform this.
+  - For **Installation**: Give a step-by-step guide on how to install project dependencies. Refer to the actual package manager files.
+  - For **Usage / Getting Started**: Provide clear instructions and code examples on how to run the project. Look for main scripts or entry points.
+  
   {{#if badges}}
-  The file MUST start with the following GitHub badges, in this exact order. Use the repository URL to construct the correct URLs for the badges. For a repo like 'https://github.com/user/repo', the path is 'user/repo'.
+  The document MUST include a section for GitHub badges. It should be placed at the {{badgePosition}} of the document.
+  Use the repository URL to construct the correct URLs for the badges. For a repo like 'https://github.com/user/repo', the path is 'user/repo'.
+
+  Generate markdown for the following requested badges, in this exact order:
   {{#each badges}}
   - {{this}}
   {{/each}}
@@ -64,23 +82,10 @@ const generateDocumentationPrompt = ai.definePrompt({
   - Issues: [![GitHub issues](https://img.shields.io/github/issues/user/repo)](https://github.com/user/repo/issues)
   - Forks: [![GitHub forks](https://img.shields.io/github/forks/user/repo)](https://github.com/user/repo/network/members)
   - License: [![GitHub license](https://img.shields.io/github/license/user/repo)](https://github.com/user/repo/blob/main/LICENSE)
+  - Buy Me A Coffee: [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-yellow.svg)](https://www.buymeacoffee.com/your-username) (Use 'your-username' as a placeholder)
+  - Twitter: [![Twitter Follow](https://img.shields.io/twitter/follow/your-username?style=social)](https://twitter.com/your-username) (Use 'your-username' as a placeholder)
   {{/if}}
 
-  After the badges (if any), the documentation MUST only contain the following sections, in the order provided:
-  {{#each sections}}
-  - {{this}}
-  {{/each}}
-
-  If 'Table of Contents' is requested, it MUST be the first section after the badges (if any). The table of contents should list the other requested sections of the document as clickable anchor links. For example: '[Installation](#installation)'.
-  
-  For each requested section, generate appropriate and comprehensive content based on the repository's file tree and the content of the key files provided.
-  
-  - For **Project Overview**: Provide a brief introduction to the project.
-  - For **Features**: Create a bulleted list of key features.
-  - For **Prerequisites**: List what users need to have installed to run the project (e.g., Node.js, Python). Use files like 'package.json' or 'requirements.txt' to inform this.
-  - For **Installation**: Give a step-by-step guide on how to install project dependencies. Refer to the actual package manager files.
-  - For **Usage / Getting Started**: Provide clear instructions and code examples on how to run the project. Look for main scripts or entry points.
-  
   Use clear and concise language. Format code blocks appropriately for markdown.
   Organize the documentation into logical sections with clear headings (e.g., '## Overview').
 `,

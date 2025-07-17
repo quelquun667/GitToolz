@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge } from 'lucide-react';
+import { Download, GitBranch, Globe, Loader2, BookText, Sparkles, FileText, Copy, Link as LinkIcon, List, Settings, RefreshCw, Terminal, Files, ChevronDown, Badge as BadgeIcon, ArrowDownToLine, ArrowUpToLine } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Switch } from './ui/switch';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 
 const DOC_SECTIONS = [
@@ -44,6 +45,8 @@ const BADGE_OPTIONS = [
     { id: 'issues', label: 'Issues', value: 'Issues' },
     { id: 'forks', label: 'Forks', value: 'Forks' },
     { id: 'license', label: 'License', value: 'License' },
+    { id: 'buymeacoffee', label: 'Buy Me A Coffee', value: 'Buy Me A Coffee' },
+    { id: 'twitter', label: 'Twitter Follow', value: 'Twitter' },
 ];
 
 
@@ -93,10 +96,11 @@ const extractRepoName = (url: string | null) => {
 export default function DocumentationGenerator() {
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState('');
-  const [branch, setBranch] = useState('');
+  const [branch, setBranch] = useState('main');
   const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
-  const [selectedBadges, setSelectedBadges] = useState<string[]>(BADGE_OPTIONS.map(s => s.value));
-  const [isBadgesOpen, setIsBadgesOpen] = useState(true);
+  const [selectedBadges, setSelectedBadges] = useState<string[]>(['Stars', 'Issues']);
+  const [badgePosition, setBadgePosition] = useState<'top' | 'bottom'>('top');
+  const [isBadgesOpen, setIsBadgesOpen] = useState(false);
 
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
@@ -181,7 +185,7 @@ export default function DocumentationGenerator() {
       const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repoUrl, branch, sections: selectedSections, badges: selectedBadges }),
+          body: JSON.stringify({ repoUrl, branch, sections: selectedSections, badges: selectedBadges, badgePosition }),
       });
 
       if (!response.body) {
@@ -305,42 +309,6 @@ export default function DocumentationGenerator() {
               <CardDescription>Select the sections to include.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Collapsible open={isBadgesOpen} onOpenChange={setIsBadgesOpen}>
-                  <div className="flex items-center space-x-2">
-                      <Checkbox
-                          id="badges"
-                          checked={selectedBadges.length > 0}
-                          onCheckedChange={(checked) => {
-                              setSelectedBadges(checked ? BADGE_OPTIONS.map(b => b.value) : []);
-                          }}
-                      />
-                      <CollapsibleTrigger asChild>
-                          <div className="flex flex-1 items-center justify-between cursor-pointer">
-                              <Label htmlFor="badges" className="font-medium flex items-center gap-2">
-                                  <Badge className="h-4 w-4"/>
-                                  GitHub Badges
-                              </Label>
-                              <ChevronDown className={cn("h-4 w-4 transition-transform", isBadgesOpen && "rotate-180")} />
-                          </div>
-                      </CollapsibleTrigger>
-                  </div>
-                  <CollapsibleContent className="pl-6 pt-2 space-y-2">
-                      {BADGE_OPTIONS.map((badge) => (
-                          <div key={badge.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                  id={badge.id}
-                                  value={badge.value}
-                                  checked={selectedBadges.includes(badge.value)}
-                                  onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
-                              />
-                              <Label htmlFor={badge.id} className="font-normal text-sm">{badge.label}</Label>
-                          </div>
-                      ))}
-                  </CollapsibleContent>
-              </Collapsible>
-
-              <Separator />
-
               {DOC_SECTIONS.map((section) => (
                 <div key={section.id} className="flex items-center space-x-2">
                   <Checkbox 
@@ -356,6 +324,55 @@ export default function DocumentationGenerator() {
                 </div>
               ))}
             </CardContent>
+          </Card>
+          
+           <Card className="shadow-lg">
+            <CardHeader>
+              <Collapsible open={isBadgesOpen} onOpenChange={setIsBadgesOpen} className='space-y-2'>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                        <BadgeIcon className="h-5 w-5" />
+                        Badges
+                    </CardTitle>
+                    <CollapsibleTrigger asChild>
+                        <Button variant='ghost' size='sm'>
+                            <ChevronDown className={cn("h-4 w-4 transition-transform", isBadgesOpen && "rotate-180")} />
+                            <span className="sr-only">Toggle Badge Options</span>
+                        </Button>
+                    </CollapsibleTrigger>
+                </div>
+                 <CardDescription>Include and configure badges for your project.</CardDescription>
+                  <CollapsibleContent className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-2">
+                          {BADGE_OPTIONS.map((badge) => (
+                              <div key={badge.id} className="flex items-center space-x-2">
+                                  <Checkbox
+                                      id={badge.id}
+                                      value={badge.value}
+                                      checked={selectedBadges.includes(badge.value)}
+                                      onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
+                                  />
+                                  <Label htmlFor={badge.id} className="font-normal text-sm">{badge.label}</Label>
+                              </div>
+                          ))}
+                      </div>
+                      <Separator/>
+                      <div className="space-y-2">
+                        <Label>Badge Position</Label>
+                         <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="top" id="pos-top"/>
+                                <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="bottom" id="pos-bottom"/>
+                                <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                            </div>
+                         </RadioGroup>
+                      </div>
+                  </CollapsibleContent>
+              </Collapsible>
+            </CardHeader>
           </Card>
           
           <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} />

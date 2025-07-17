@@ -11,6 +11,7 @@ const docFormSchema = z.object({
   branch: z.string().min(1, { message: 'Branch or tag is required.' }),
   sections: z.array(z.string()).min(1, { message: 'Please select at least one section.' }),
   badges: z.array(z.string()).optional(),
+  badgePosition: z.enum(['top', 'bottom']).optional(),
 });
 
 const fetchCommitsSchema = z.object({

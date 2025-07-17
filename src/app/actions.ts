@@ -3,7 +3,7 @@
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
-import { getRepoCommitsByDate, validateRepo as validateRepoService } from '@/services/github';
+import { getRepoBranches, getRepoCommitsByDate, validateRepo as validateRepoService } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -32,7 +32,6 @@ const changelogFormSchema = z.object({
 
 const validateRepoSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
-  branch: z.string().min(1, { message: 'Branch or tag is required.' }),
 });
 
 export async function validateRepo(
@@ -44,10 +43,30 @@ export async function validateRepo(
   }
 
   try {
-    await validateRepoService(validatedFields.data.repoUrl, validatedFields.data.branch);
+    await validateRepoService(validatedFields.data.repoUrl);
     return {};
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+    return { error };
+  }
+}
+
+export async function fetchBranchesAction(
+  repoUrl: string
+): Promise<{ branches?: string[]; error?: string }> {
+  const validatedUrl = z.string().url().safeParse(repoUrl);
+  if (!validatedUrl.success) {
+    return { error: 'Invalid repository URL.' };
+  }
+
+  try {
+    const branches = await getRepoBranches(repoUrl);
+    if (branches.length === 0) {
+      return { error: 'No branches found for this repository.' };
+    }
+    return { branches };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred while fetching branches.';
     return { error };
   }
 }

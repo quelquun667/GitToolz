@@ -39,6 +39,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Switch } from './ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 const DOC_SECTIONS = [
@@ -72,7 +73,7 @@ const BADGE_OPTIONS: BadgeOption[] = [
     { id: 'twitter', label: 'Twitter Follow', value: 'Twitter', icon: Twitter, previewUrl: 'https://img.shields.io/twitter/follow/your-username?style=social', placeholder: 'your-username', inputLabel: 'Twitter Username', inputType: 'text'},
     { id: 'discord', label: 'Discord', value: 'Discord', icon: MessageSquare, previewUrl: 'https://img.shields.io/discord/your-invite-code?logo=discord&label=Discord', placeholder: 'your-invite-code', inputLabel: 'Discord Invite Code', inputType: 'text'},
     { id: 'linkedin', label: 'LinkedIn', value: 'LinkedIn', icon: Linkedin, previewUrl: 'https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white', placeholder: 'in/your-profile-name', inputLabel: 'LinkedIn Profile Path (e.g., in/your-name)', inputType: 'text'},
-    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://starchart.cc/quelquun667/GitToolz.svg' },
+    { id: 'starHistory', label: 'Star History Chart', value: 'Star History Chart', icon: Star, previewUrl: 'https://api.star-history.com/svg?repos=quelquun667/GitToolz&type=Date' },
 ];
 
 
@@ -122,7 +123,10 @@ const extractRepoName = (url: string | null) => {
 export default function DocumentationGenerator() {
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState('');
-  const [branch, setBranch] = useState('main');
+  const [branch, setBranch] = useState('');
+  const [branches, setBranches] = useState<string[]>([]);
+  const [isFetchingBranches, setIsFetchingBranches] = useState(false);
+  
   const [selectedSections, setSelectedSections] = useState<string[]>(DOC_SECTIONS.map(s => s.value));
   const [customInstructions, setCustomInstructions] = useState('');
   const MAX_INSTRUCTIONS_LENGTH = 500;
@@ -137,9 +141,7 @@ export default function DocumentationGenerator() {
   const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false);
 
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
-  const [branchError, setBranchError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
-  const [isBranchValidating, setIsBranchValidating] = useState(false);
 
   const [documentation, setDocumentation] = useState<string | null>(null);
   const [editedDocumentation, setEditedDocumentation] = useState<string | null>(null);
@@ -162,10 +164,11 @@ export default function DocumentationGenerator() {
     return headingLines.map(line => line.replace(/^##\s/, ''));
   }, [editedDocumentation]);
 
-  const validateField = async () => {
+  const handleUrlBlur = async () => {
     setRepoUrlError(null);
-    setBranchError(null);
-
+    setBranches([]);
+    setBranch('');
+    
     if (!repoUrl) {
       setRepoUrlError('Repository URL is required.');
       return;
@@ -178,41 +181,54 @@ export default function DocumentationGenerator() {
         return;
     }
     
-    if (!branch) {
-      setBranchError('Branch or tag is required.');
-      return;
-    }
-
     setIsUrlValidating(true);
-    setIsBranchValidating(true);
     
     try {
       const response = await fetch('/api/validate-repo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl, branch }),
+        body: JSON.stringify({ repoUrl }),
       });
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error);
       }
       setRepoUrlError(null);
-      setBranchError(null);
+      await fetchBranches();
     } catch (e: any) {
-      const errorMsg = e.message || 'An unknown error occurred.';
-      if (errorMsg.includes('Repository')) {
-        setRepoUrlError(errorMsg);
-        setBranchError(null);
-      } else {
-        setBranchError(errorMsg);
-        setRepoUrlError(null);
-      }
+      setRepoUrlError(e.message || 'An unknown error occurred.');
     } finally {
       setIsUrlValidating(false);
-      setIsBranchValidating(false);
     }
   };
 
+  const fetchBranches = async () => {
+    setIsFetchingBranches(true);
+    try {
+      const response = await fetch('/api/fetch-branches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl }),
+      });
+      const result = await response.json();
+      if (result.error || !response.ok) {
+        throw new Error(result.error || 'Failed to fetch branches');
+      }
+      setBranches(result.branches);
+      if (result.branches.includes('main')) {
+        setBranch('main');
+      } else if (result.branches.includes('master')) {
+        setBranch('master');
+      } else if (result.branches.length > 0) {
+        setBranch(result.branches[0]);
+      }
+    } catch(e) {
+       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+       toast({ variant: 'destructive', title: 'Could not fetch branches', description: error });
+    } finally {
+      setIsFetchingBranches(false);
+    }
+  }
 
   const handleCopy = () => {
     if (editedDocumentation === null) return;
@@ -272,24 +288,21 @@ export default function DocumentationGenerator() {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isGenerating) return;
-    
-    validateField().then(() => {
-      const formIsValid = formRef.current?.checkValidity();
-      if (!repoUrlError && !branchError && formIsValid) {
-        if (documentation) {
-          setShowConfirmationDialog(true);
-        } else {
-          startGeneration();
-        }
-      } else {
-        // This will trigger native browser validation messages
-        formRef.current?.reportValidity();
-      }
-    });
+
+    if (documentation) {
+      setShowConfirmationDialog(true);
+    } else {
+      startGeneration();
+    }
   };
 
   const startGeneration = async () => {
     setShowConfirmationDialog(false);
+
+    if (repoUrlError || !branch) {
+      toast({ variant: 'destructive', title: 'Please fix the errors before generating.' });
+      return;
+    }
     
     setIsGenerating(true);
     setDocumentation(null);
@@ -376,7 +389,7 @@ export default function DocumentationGenerator() {
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
-  const isSubmitDisabled = !repoUrl || !branch || !!repoUrlError || !!branchError || isUrlValidating || isBranchValidating;
+  const isSubmitDisabled = !repoUrl || !branch || !!repoUrlError || isUrlValidating || isFetchingBranches;
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -415,8 +428,8 @@ export default function DocumentationGenerator() {
                     <Globe className="h-4 w-4 text-primary" />
                     Repository URL
                   </Label>
-                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={validateField} />
-                  {(isUrlValidating || isBranchValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating...</p>}
+                  <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={handleUrlBlur} />
+                  {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating...</p>}
                   {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
                 <div className="space-y-2">
@@ -424,8 +437,14 @@ export default function DocumentationGenerator() {
                     <GitBranch className="h-4 w-4 text-primary" />
                     Branch / Tag
                   </Label>
-                  <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={validateField} />
-                  {branchError && <p className="text-xs text-destructive">{branchError}</p>}
+                  <Select onValueChange={setBranch} value={branch} disabled={isFetchingBranches || branches.length === 0}>
+                      <SelectTrigger>
+                          <SelectValue placeholder={isFetchingBranches ? "Fetching branches..." : "Select a branch"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                      </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -540,7 +559,7 @@ export default function DocumentationGenerator() {
                                       {badge.label}
                                     </div>
                                   </Label>
-                                   <Image src={badge.previewUrl} alt={`${badge.label} badge preview`} width={80} height={badge.id === 'starHistory' ? 40 : 20} unoptimized className="rounded-sm"/>
+                                   <Image src={badge.previewUrl.replace('quelquun667/GitToolz', extractRepoName(repoUrl) || 'quelquun667/GitToolz')} alt={`${badge.label} badge preview`} width={80} height={badge.id === 'starHistory' ? 40 : 20} unoptimized className="rounded-sm"/>
                                 </div>
                                 {badge.inputLabel && selectedBadges.includes(badge.value) && (
                                   <div className="relative pl-7 mt-2">

@@ -133,18 +133,27 @@ export default function DocumentationGenerator() {
   const validateField = async (field: 'repoUrl' | 'branch') => {
     let currentUrl = repoUrl;
     let currentBranch = branch;
+
     if (field === 'repoUrl') {
       setRepoUrlError(null);
       if (!currentUrl) return;
-      try { new URL(currentUrl) } catch { setRepoUrlError("Please enter a valid URL."); return; }
+      try {
+        new URL(currentUrl);
+        if (!currentUrl.includes('github.com')) throw new Error();
+      } catch {
+        setRepoUrlError('Please enter a valid GitHub URL.');
+        return;
+      }
       setIsUrlValidating(true);
     }
+
     if (field === 'branch') {
       setBranchError(null);
       if (!currentBranch) return;
       setIsBranchValidating(true);
     }
-
+    
+    // Always validate both once one field is blurred
     try {
       const response = await fetch('/api/validate-repo', {
         method: 'POST',
@@ -155,19 +164,21 @@ export default function DocumentationGenerator() {
       if (!response.ok) {
         throw new Error(result.error);
       }
-      if (field === 'repoUrl') setRepoUrlError(null);
-      if (field === 'branch') setBranchError(null);
+      // If successful, clear both errors
+      setRepoUrlError(null);
+      setBranchError(null);
     } catch (e: any) {
       const errorMsg = e.message || 'An unknown error occurred.';
-      if (errorMsg.toLowerCase().includes('branch') || errorMsg.toLowerCase().includes('not found')) {
+      if (errorMsg.toLowerCase().includes('branch')) {
         setBranchError(errorMsg);
-        setRepoUrlError(null);
+        setRepoUrlError(null); // Clear repo error if branch is the issue
       } else {
         setRepoUrlError(errorMsg);
+        setBranchError(null); // Clear branch error if repo is the issue
       }
     } finally {
-      if (field === 'repoUrl') setIsUrlValidating(false);
-      if (field === 'branch') setIsBranchValidating(false);
+      setIsUrlValidating(false);
+      setIsBranchValidating(false);
     }
   };
 
@@ -307,7 +318,7 @@ export default function DocumentationGenerator() {
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
   const repoName = useMemo(() => extractRepoName(repoUrl), [repoUrl]);
-  const isSubmitDisabled = !!repoUrlError || !!branchError || isUrlValidating || isBranchValidating;
+  const isSubmitDisabled = !repoUrl || !branch || !!repoUrlError || !!branchError || isUrlValidating || isBranchValidating;
   
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -347,7 +358,7 @@ export default function DocumentationGenerator() {
                     Repository URL
                   </Label>
                   <Input id="repoUrl" name="repoUrl" placeholder="https://github.com/user/repo" required value={repoUrl} onChange={e => setRepoUrl(e.target.value)} onBlur={() => validateField('repoUrl')} />
-                  {isUrlValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating URL...</p>}
+                  {(isUrlValidating || isBranchValidating) && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating repository...</p>}
                   {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                 </div>
                 <div className="space-y-2">
@@ -356,7 +367,6 @@ export default function DocumentationGenerator() {
                     Branch / Tag
                   </Label>
                   <Input id="branch" name="branch" placeholder="main" required value={branch} onChange={e => setBranch(e.target.value)} onBlur={() => validateField('branch')} />
-                  {isBranchValidating && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Loader2 className="h-3 w-3 animate-spin"/> Validating branch...</p>}
                   {branchError && <p className="text-xs text-destructive">{branchError}</p>}
                 </div>
               </div>

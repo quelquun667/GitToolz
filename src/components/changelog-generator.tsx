@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon, Search, ListChecks, GitBranch } from 'lucide-react';
+import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon, Search, ListChecks, GitBranch, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -45,6 +45,7 @@ export default function ChangelogGenerator() {
   // Step 3: Generation state
   const [changelog, setChangelog] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
   
   const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
@@ -238,6 +239,11 @@ export default function ChangelogGenerator() {
       };
       
       await processStream();
+      setIsGenerating(false);
+      setIsFinalizing(true);
+      setTimeout(() => {
+        setIsFinalizing(false);
+      }, 1500);
 
     } catch (e) {
       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -246,7 +252,6 @@ export default function ChangelogGenerator() {
         title: 'Generation Failed',
         description: error,
       });
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -275,6 +280,81 @@ export default function ChangelogGenerator() {
   
   const totalSelected = Object.values(selectedCommits).filter(Boolean).length;
   const isFetchDisabled = !repoUrl || !branch || isFetchingCommits || !!repoUrlError || isUrlValidating || isFetchingBranches;
+
+  const renderMainContent = () => {
+    if (isGenerating) {
+      return (
+        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+          <div className="text-center p-4 max-w-md mx-auto">
+            <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+            <h3 className="mt-4 text-lg font-medium">Generating Changelog...</h3>
+            <Card className="mt-4 text-left bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
+                  <ScrollArea className="h-32 w-full">
+                    <div className="flex-1 space-y-1 text-sm text-muted-foreground">
+                      {generationLog.map((log, index) => <p key={index}>{log}</p>)}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
+    if (isFinalizing) {
+      return (
+        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+          <div className="text-center p-4">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
+            <h3 className="mt-4 text-lg font-medium">Done!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Your changelog is ready.</p>
+          </div>
+        </div>
+      );
+    }
+    
+    if (changelog !== null && displayStartDate && displayEndDate) {
+      return (
+         <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
+           <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle>Changelog</CardTitle>
+                <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayStartDate, "PPP")}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayEndDate, "PPP")}</span></CardDescription>
+              </div>
+               <div className="flex gap-2">
+                  <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
+                  <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
+                </div>
+            </CardHeader>
+            <div className="flex-1 overflow-auto p-6 border-t">
+                <div className="prose prose-invert max-w-none break-words">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{changelog}</ReactMarkdown>
+                </div>
+            </div>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
+        <div className="text-center">
+          <ListChecks className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {allCommits.length > 0 
+              ? "Select commits and click 'Generate Changelog'."
+              : "Fetch commits to begin."
+            }
+          </p>
+        </div>
+      </div>
+    );
+  };
+
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -383,57 +463,7 @@ export default function ChangelogGenerator() {
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        {isGenerating ? (
-          <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center p-4 max-w-md mx-auto">
-              <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-              <h3 className="mt-4 text-lg font-medium">Generating Changelog...</h3>
-              <Card className="mt-4 text-left bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
-                    <ScrollArea className="h-32 w-full">
-                      <div className="flex-1 space-y-1 text-sm text-muted-foreground">
-                        {generationLog.map((log, index) => <p key={index}>{log}</p>)}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        ) : changelog !== null && displayStartDate && displayEndDate ? (
-           <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
-             <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Changelog</CardTitle>
-                  <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayStartDate, "PPP")}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayEndDate, "PPP")}</span></CardDescription>
-                </div>
-                 <div className="flex gap-2">
-                    <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
-                    <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
-                  </div>
-              </CardHeader>
-              <div className="flex-1 overflow-auto p-6 border-t">
-                  <div className="prose prose-invert max-w-none break-words">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{changelog}</ReactMarkdown>
-                  </div>
-              </div>
-          </Card>
-        ) : (
-          <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-            <div className="text-center">
-              <ListChecks className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">Awaiting Action</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {allCommits.length > 0 
-                  ? "Select commits and click 'Generate Changelog'."
-                  : "Fetch commits to begin."
-                }
-              </p>
-            </div>
-          </div>
-        )}
+        {renderMainContent()}
       </main>
     </div>
   );

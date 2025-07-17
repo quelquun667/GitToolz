@@ -29,10 +29,9 @@ function parseRepoUrl(url: string): { owner: string; repo: string } {
   }
 }
 
-export async function validateRepo(repoUrl: string, branch: string): Promise<void> {
+export async function validateRepo(repoUrl: string): Promise<void> {
   const { owner, repo } = parseRepoUrl(repoUrl);
   try {
-    // First, check if the repository exists and is accessible
     await octokit.rest.repos.get({ owner, repo });
   } catch (error: any) {
     if (error.status === 404) {
@@ -41,24 +40,26 @@ export async function validateRepo(repoUrl: string, branch: string): Promise<voi
     if (error.status === 401) {
       throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
     }
-    // For other errors (like 403 rate limit), throw a generic message
     throw new Error('Failed to access repository. Check URL and token permissions.');
   }
+}
 
-  try {
-    // If the repo exists, check for the branch
-    await octokit.rest.repos.getBranch({
-      owner,
-      repo,
-      branch,
-    });
-  } catch (error: any) {
-    if (error.status === 404) {
-      throw new Error(`Branch "${branch}" does not exist in this repository.`);
+export async function getRepoBranches(repoUrl: string): Promise<string[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
+            owner,
+            repo,
+            per_page: 100,
+        });
+        return branches.map(branch => branch.name);
+    } catch (error: any) {
+        if (error.status === 404) {
+            throw new Error('Repository not found when fetching branches.');
+        }
+        console.error('GitHub API Error fetching branches:', error);
+        throw new Error('Failed to fetch repository branches from GitHub.');
     }
-    // This could be another auth error if the repo is private and branch protection is on
-    throw new Error('Failed to validate branch. Check its name and permissions.');
-  }
 }
 
 export async function getRepoTree(repoUrl: string, branch: string): Promise<{ path: string; type: string; }[]> {

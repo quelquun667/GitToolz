@@ -12,6 +12,8 @@ const docFormSchema = z.object({
   sections: z.array(z.string()).min(1, { message: 'Please select at least one section.' }),
   badges: z.array(z.string()).optional(),
   badgePosition: z.enum(['top', 'bottom']).optional(),
+  buyMeACoffeeUsername: z.string().optional(),
+  twitterUsername: z.string().optional(),
 });
 
 const fetchCommitsSchema = z.object({

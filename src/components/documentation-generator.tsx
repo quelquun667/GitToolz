@@ -501,12 +501,15 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                               return <h2 id={id} {...props} />;
                             },
                             img: ({node, src, ...props}) => {
-                              if (!src) return <img {...props} />;
+                              if (!src) return <img {...props} alt="" />;
 
-                              // Check if the src is an absolute URL
-                              const isAbsolute = src.startsWith('http');
+                              const isBadge = src.includes('shields.io') || src.includes('star-history.com');
+                              if (isBadge) {
+                                // eslint-disable-next-line @next/next/no-img-element
+                                return <img src={src} {...props} alt={props.alt || ""} style={{ display: 'inline-block', margin: '0 0.25em' }} />;
+                              }
                               
-                              // If it's a relative path (from the repo), construct the full URL
+                              const isAbsolute = src.startsWith('http');
                               const imageUrl = isAbsolute ? src : getRawImageUrl(repoPath, branch, src);
                               
                               return <Image src={imageUrl} alt={props.alt || ''} width={800} height={400} className="rounded-md" unoptimized />;

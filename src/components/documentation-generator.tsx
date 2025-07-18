@@ -170,6 +170,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const formRef = useRef<HTMLFormElement>(null);
   
   const isConfigurationDisabled = !branch || isFetchingTree;
+  const repoPath = useMemo(() => extractRepoPath(repoUrl), [repoUrl]);
 
   useEffect(() => {
     // Set default branch when branches are loaded
@@ -398,8 +399,12 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   };
 
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
-  const repoPath = useMemo(() => extractRepoPath(repoUrl), [repoUrl]);
+  
   const isGenerateDisabled = !repoUrl || !branch || isFetchingTree;
+
+  const getRawImageUrl = (repoPath: string, branch: string, imageFilePath: string) => {
+    return `https://raw.githubusercontent.com/${repoPath}/${branch}/${imageFilePath}`;
+  };
 
   const renderMainContent = () => {
     if (isGenerating) {
@@ -495,6 +500,17 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                               const id = slugify(childText);
                               return <h2 id={id} {...props} />;
                             },
+                            img: ({node, src, ...props}) => {
+                              if (!src) return <img {...props} />;
+
+                              // Check if the src is an absolute URL
+                              const isAbsolute = src.startsWith('http');
+                              
+                              // If it's a relative path (from the repo), construct the full URL
+                              const imageUrl = isAbsolute ? src : getRawImageUrl(repoPath, branch, src);
+                              
+                              return <Image src={imageUrl} alt={props.alt || ''} width={800} height={400} className="rounded-md" unoptimized />;
+                            }
                           }}
                         >
                           {editedDocumentation}
@@ -537,10 +553,6 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
           </div>
         </div>
     );
-  };
-
-  const getRawImageUrl = (repoPath: string, branch: string, imageFilePath: string) => {
-    return `https://raw.githubusercontent.com/${repoPath}/${branch}/${imageFilePath}`;
   };
   
   return (

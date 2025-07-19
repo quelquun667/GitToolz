@@ -19,6 +19,7 @@ const GenerateTestCasesInputSchema = z.object({
   functionName: z.string().describe('The name of the function or class to generate tests for. If set to "[Entire File]", test all functions.'),
   testFramework: z.string().describe('The testing framework to use (e.g., Jest, Vitest, Pytest).'),
   fileContent: z.string().optional().describe('The full content of the file to be analyzed.'),
+  isEntireFile: z.boolean().optional().describe('Flag to indicate if the entire file should be tested.'),
 });
 export type GenerateTestCasesInput = z.infer<typeof GenerateTestCasesInputSchema>;
 
@@ -39,11 +40,11 @@ Your task is to generate a suite of test cases for a specific target within a gi
 
 - Testing Framework: {{{testFramework}}}
 - File Path: {{{filePath}}}
-{{#ifneq functionName "[Entire File]"}}
-- Function/Class to Test: {{{functionName}}}
-{{else}}
+{{#if isEntireFile}}
 - Target: The entire file. You should generate tests for all functions and classes found.
-{{/ifneq}}
+{{else}}
+- Function/Class to Test: {{{functionName}}}
+{{/if}}
 
 Here is the content of the file:
 \`\`\`
@@ -75,15 +76,17 @@ export async function* generateTestCases(
     if (!fileContent) {
       throw new Error(`Could not read file content for: ${input.filePath}`);
     }
+    
+    const isEntireFile = input.functionName === '[Entire File]';
 
-    if (input.functionName === '[Entire File]') {
+    if (isEntireFile) {
         yield { status: `Analyzing all functions in the file...` };
     } else {
         yield { status: `Analyzing function \`${input.functionName}\`...` };
     }
     yield { status: 'Generating test cases with AI...' };
 
-    const finalInput = { ...input, fileContent };
+    const finalInput = { ...input, fileContent, isEntireFile };
     const { output } = await generateTestCasesPrompt(finalInput);
 
     if (!output?.testCases) {

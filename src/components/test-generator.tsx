@@ -357,7 +357,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                       return <code {...props} className={`${className || ''} text-sm`} style={{whiteSpace: 'pre-wrap'}}>{children}</code>
                     }
                   }}>
-                    {testResult.code}
+                    {`\`\`\`${filePath.split('.').pop()}\n${testResult.code}\n\`\`\``}
                   </ReactMarkdown>
                 </div>
             </div>
@@ -413,7 +413,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         </Card>
         
         {showSecondStep && (
-            <Card className="shadow-lg">
+            <Card className="shadow-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4" data-state="open">
                 <CardHeader>
                     <CardTitle>2. Configure Test</CardTitle>
                     <CardDescription>Specify what to test and how.</CardDescription>

@@ -391,7 +391,7 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
           </Card>
 
           {allCommits.length > 0 && (
-            <Card className="shadow-lg flex-1 flex flex-col">
+            <Card className="shadow-lg flex-1 flex flex-col data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4" data-state="open">
               <CardHeader>
                 <CardTitle>2. Select Commits</CardTitle>
                 <CardDescription>Choose which commits to include in the changelog. {totalSelected} of {allCommits.length} selected.</CardDescription>
@@ -421,8 +421,8 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                       );
 
                       const commitRow = (
-                        <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 w-full">
-                           <Checkbox
+                         <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 w-full">
+                            <Checkbox
                                 id={commit.sha}
                                 checked={selectedCommits[commit.sha] || false}
                                 onCheckedChange={(checked) => {
@@ -430,9 +430,9 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                                 }}
                                 className="mt-1"
                             />
-                            {isMobile ? (
+                             {isMobile ? (
                                 <CommitDetailsModal commit={commit}>
-                                    <div className="flex-1">{commitContent}</div>
+                                    <div className="flex-1 cursor-pointer">{commitContent}</div>
                                 </CommitDetailsModal>
                             ) : (
                                 <div className="flex-1">{commitContent}</div>

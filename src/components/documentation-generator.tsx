@@ -611,259 +611,261 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
             </CardContent>
           </Card>
           
-          <fieldset className="space-y-6 disabled:opacity-60" disabled={isConfigurationDisabled}>
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Options
-                </CardTitle>
-                <CardDescription>Select the sections to include.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {DOC_SECTIONS.map((section) => (
-                  <div key={section.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={section.id} 
-                      name="sections" 
-                      value={section.value} 
-                      checked={selectedSections.includes(section.value)}
-                      onCheckedChange={(checked) => handleSectionChange(section.value, !!checked)}
-                    />
-                    <Label htmlFor={section.id} className="font-normal text-sm">
-                      {section.label}
-                    </Label>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  Project Image
-                </CardTitle>
-                <CardDescription>Add a logo or banner to the documentation.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                  <RadioGroup value={imageSource} onValueChange={(value) => setImageSource(value as 'none' | 'url' | 'repo')} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="none" id="img-none"/>
-                          <Label htmlFor="img-none" className="font-normal">None</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="url" id="img-url"/>
-                          <Label htmlFor="img-url" className="font-normal">From URL</Label>
-                      </div>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="repo" id="img-repo" disabled={repoImages.length === 0} />
-                                <Label htmlFor="img-repo" className={cn("font-normal", repoImages.length === 0 && "text-muted-foreground cursor-not-allowed")}>From Repository</Label>
-                            </div>
-                          </TooltipTrigger>
-                          {repoImages.length === 0 && (
-                            <TooltipContent>
-                              <p>No images found in repository.</p>
-                              <p className="text-xs text-muted-foreground">Select a branch to scan for images.</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                  </RadioGroup>
-                  
-                  {imageSource === 'url' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUrl">Image URL</Label>
-                      <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/logo.png" />
-                    </div>
-                  )}
-                  {imageSource === 'repo' && (
-                    <div className="space-y-2">
-                      <Label htmlFor="imagePath">Image Path</Label>
-                      <Dialog open={isImageSelectorOpen} onOpenChange={setIsImageSelectorOpen}>
-                        <DialogTrigger asChild>
-                           <Button variant="outline" className="w-full justify-start text-left font-normal">
-                            {imagePath || "Select image from repository..."}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Select Repository Image</DialogTitle>
-                            <DialogDescription>Click on an image to select it.</DialogDescription>
-                          </DialogHeader>
-                          <ScrollArea className="h-96">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-                              {repoImages.map((path) => (
-                                <div
-                                  key={path}
-                                  onClick={() => setTempSelectedImage(path)}
-                                  className={cn(
-                                    "cursor-pointer rounded-lg border-2 p-2 hover:border-primary",
-                                    tempSelectedImage === path ? "border-primary bg-primary/10" : "border-transparent"
-                                  )}
-                                >
-                                  <div className="relative aspect-video w-full">
-                                    <Image
-                                      src={getRawImageUrl(repoPath, branch, path)}
-                                      alt={`Preview of ${path}`}
-                                      layout="fill"
-                                      objectFit="contain"
-                                      className="rounded-md"
-                                      unoptimized
-                                    />
-                                  </div>
-                                  <p className="mt-2 text-xs text-center truncate font-mono">{path}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </ScrollArea>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsImageSelectorOpen(false)}>Cancel</Button>
-                             <Button onClick={() => {
-                              setImagePath(tempSelectedImage);
-                              setIsImageSelectorOpen(false);
-                            }}>Done</Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
-                  )}
-                  {imageSource !== 'none' && (
-                    <div className="space-y-2">
-                      <Label>Position</Label>
-                      <RadioGroup value={imagePosition} onValueChange={(value) => setImagePosition(value as 'top' | 'bottom')} className="flex gap-4">
-                          <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="top" id="pos-top-img"/>
-                              <Label htmlFor="pos-top-img" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
-                          </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="bottom" id="pos-bottom-img"/>
-                              <Label htmlFor="pos-bottom-img" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
-                          </div>
-                      </RadioGroup>
-                    </div>
-                  )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
+          {!isConfigurationDisabled && (
+            <div className="space-y-6 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4" data-state="open">
+              <Card className="shadow-lg">
+                <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Custom Instructions
+                    <Settings className="h-5 w-5" />
+                    Options
                   </CardTitle>
-                  <CardDescription>Provide specific instructions for the AI.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <Textarea
-                      id="customInstructions"
-                      name="customInstructions"
-                      placeholder="e.g., 'Generate the documentation in a formal tone.' or 'Focus on the installation for beginners.'"
-                      value={customInstructions}
-                      onChange={(e) => setCustomInstructions(e.target.value)}
-                      maxLength={MAX_INSTRUCTIONS_LENGTH}
-                      className="min-h-[100px]"
-                  />
-                  <p className="text-xs text-muted-foreground text-right mt-2">
-                      {customInstructions.length} / {MAX_INSTRUCTIONS_LENGTH}
-                  </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Badges &amp; Visuals</CardTitle>
-                <CardDescription>Configure and add badges to your documentation.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Dialog open={isBadgeDialogOpen} onOpenChange={setIsBadgeDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="secondary" className="w-full">
-                      <BadgeIcon className="mr-2 h-4 w-4"/>
-                      Configure Badges ({selectedBadges.length} selected)
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Configure Badges &amp; Visuals</DialogTitle>
-                      <DialogDescription>
-                        Select items to include, provide any required info, and choose their position.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col md:flex-row gap-6 py-4">
-                      <div className="w-full md:w-1/2 space-y-4">
-                        <h4 className="font-medium text-foreground">Position</h4>
-                        <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="top" id="pos-top"/>
-                                <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
-                            </div>
-                              <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="bottom" id="pos-bottom"/>
-                                <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
-                            </div>
-                        </RadioGroup>
-                         <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
-                          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                          <p>Usernames, invite codes, and profile paths are not verified. Please ensure they are correct.</p>
-                        </div>
-                      </div>
-                      <Separator orientation='vertical' className="h-auto hidden md:block" />
-                      <Separator className="block md:hidden"/>
-                      <div className="w-full md:w-1/2">
-                         <h4 className="font-medium text-foreground">Available Items</h4>
-                         <p className="text-xs text-muted-foreground mb-4">Previews use your entered repository. Please ensure it is public.</p>
-                         <ScrollArea className="h-72">
-                           <div className="space-y-4 pr-4">
-                              {BADGE_OPTIONS.map((badge) => (
-                                <div key={badge.id}>
-                                  <div className="flex items-center space-x-3">
-                                    <Checkbox
-                                      id={`badge-${badge.id}`}
-                                      value={badge.value}
-                                      checked={selectedBadges.includes(badge.value)}
-                                      onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
-                                    />
-                                    <Label htmlFor={`badge-${badge.id}`} className="font-normal text-sm flex-1 cursor-pointer">
-                                      <div className="flex items-center gap-2">
-                                        <badge.icon className="h-4 w-4 text-muted-foreground" />
-                                        {badge.label}
-                                      </div>
+                  <CardDescription>Select the sections to include.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {DOC_SECTIONS.map((section) => (
+                    <div key={section.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={section.id} 
+                        name="sections" 
+                        value={section.value} 
+                        checked={selectedSections.includes(section.value)}
+                        onCheckedChange={(checked) => handleSectionChange(section.value, !!checked)}
+                      />
+                      <Label htmlFor={section.id} className="font-normal text-sm">
+                        {section.label}
+                      </Label>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
-                                    </Label>
-                                     <Image src={badge.previewUrl.replace('user/repo', repoPath)} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
-                                  </div>
-                                  {badge.inputLabel && selectedBadges.includes(badge.value) && (
-                                    <div className="relative pl-7 mt-2">
-                                      <Input
-                                          type={badge.inputType || 'text'}
-                                          placeholder={badge.placeholder}
-                                          required={selectedBadges.includes(badge.value)}
-                                          value={getBadgeInputValue(badge.id)}
-                                          onChange={e => setBadgeInputValue(badge.id, e.target.value)}
-                                          className="h-8"
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5" />
+                    Project Image
+                  </CardTitle>
+                  <CardDescription>Add a logo or banner to the documentation.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <RadioGroup value={imageSource} onValueChange={(value) => setImageSource(value as 'none' | 'url' | 'repo')} className="flex gap-4">
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="none" id="img-none"/>
+                            <Label htmlFor="img-none" className="font-normal">None</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="url" id="img-url"/>
+                            <Label htmlFor="img-url" className="font-normal">From URL</Label>
+                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="repo" id="img-repo" disabled={repoImages.length === 0} />
+                                  <Label htmlFor="img-repo" className={cn("font-normal", repoImages.length === 0 && "text-muted-foreground cursor-not-allowed")}>From Repository</Label>
+                              </div>
+                            </TooltipTrigger>
+                            {repoImages.length === 0 && (
+                              <TooltipContent>
+                                <p>No images found in repository.</p>
+                                <p className="text-xs text-muted-foreground">Select a branch to scan for images.</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                    </RadioGroup>
+                    
+                    {imageSource === 'url' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="imageUrl">Image URL</Label>
+                        <Input id="imageUrl" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/logo.png" />
+                      </div>
+                    )}
+                    {imageSource === 'repo' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="imagePath">Image Path</Label>
+                        <Dialog open={isImageSelectorOpen} onOpenChange={setIsImageSelectorOpen}>
+                          <DialogTrigger asChild>
+                             <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              {imagePath || "Select image from repository..."}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Select Repository Image</DialogTitle>
+                              <DialogDescription>Click on an image to select it.</DialogDescription>
+                            </DialogHeader>
+                            <ScrollArea className="h-96">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+                                {repoImages.map((path) => (
+                                  <div
+                                    key={path}
+                                    onClick={() => setTempSelectedImage(path)}
+                                    className={cn(
+                                      "cursor-pointer rounded-lg border-2 p-2 hover:border-primary",
+                                      tempSelectedImage === path ? "border-primary bg-primary/10" : "border-transparent"
+                                    )}
+                                  >
+                                    <div className="relative aspect-video w-full">
+                                      <Image
+                                        src={getRawImageUrl(repoPath, branch, path)}
+                                        alt={`Preview of ${path}`}
+                                        layout="fill"
+                                        objectFit="contain"
+                                        className="rounded-md"
+                                        unoptimized
                                       />
                                     </div>
-                                  )}
-                                </div>
-                              ))}
-                           </div>
-                         </ScrollArea>
+                                    <p className="mt-2 text-xs text-center truncate font-mono">{path}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setIsImageSelectorOpen(false)}>Cancel</Button>
+                               <Button onClick={() => {
+                                setImagePath(tempSelectedImage);
+                                setIsImageSelectorOpen(false);
+                              }}>Done</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={() => setIsBadgeDialogOpen(false)}>Done</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-            
-            <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
-          </fieldset>
+                    )}
+                    {imageSource !== 'none' && (
+                      <div className="space-y-2">
+                        <Label>Position</Label>
+                        <RadioGroup value={imagePosition} onValueChange={(value) => setImagePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="top" id="pos-top-img"/>
+                                <Label htmlFor="pos-top-img" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                            </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="bottom" id="pos-bottom-img"/>
+                                <Label htmlFor="pos-bottom-img" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                            </div>
+                        </RadioGroup>
+                      </div>
+                    )}
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-lg">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        Custom Instructions
+                    </CardTitle>
+                    <CardDescription>Provide specific instructions for the AI.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Textarea
+                        id="customInstructions"
+                        name="customInstructions"
+                        placeholder="e.g., 'Generate the documentation in a formal tone.' or 'Focus on the installation for beginners.'"
+                        value={customInstructions}
+                        onChange={(e) => setCustomInstructions(e.target.value)}
+                        maxLength={MAX_INSTRUCTIONS_LENGTH}
+                        className="min-h-[100px]"
+                    />
+                    <p className="text-xs text-muted-foreground text-right mt-2">
+                        {customInstructions.length} / {MAX_INSTRUCTIONS_LENGTH}
+                    </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="shadow-lg">
+                <CardHeader>
+                  <CardTitle>Badges &amp; Visuals</CardTitle>
+                  <CardDescription>Configure and add badges to your documentation.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Dialog open={isBadgeDialogOpen} onOpenChange={setIsBadgeDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="secondary" className="w-full">
+                        <BadgeIcon className="mr-2 h-4 w-4"/>
+                        Configure Badges ({selectedBadges.length} selected)
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Configure Badges &amp; Visuals</DialogTitle>
+                        <DialogDescription>
+                          Select items to include, provide any required info, and choose their position.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex flex-col md:flex-row gap-6 py-4">
+                        <div className="w-full md:w-1/2 space-y-4">
+                          <h4 className="font-medium text-foreground">Position</h4>
+                          <RadioGroup value={badgePosition} onValueChange={(value) => setBadgePosition(value as 'top' | 'bottom')} className="flex gap-4">
+                              <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="top" id="pos-top"/>
+                                  <Label htmlFor="pos-top" className="font-normal flex items-center gap-1.5"><ArrowUpToLine className="h-4 w-4" /> Top</Label>
+                              </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="bottom" id="pos-bottom"/>
+                                  <Label htmlFor="pos-bottom" className="font-normal flex items-center gap-1.5"><ArrowDownToLine className="h-4 w-4" /> Bottom</Label>
+                              </div>
+                          </RadioGroup>
+                           <div className="flex items-start gap-2 text-xs text-muted-foreground p-2 bg-muted/50 rounded-md mt-2">
+                            <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                            <p>Usernames, invite codes, and profile paths are not verified. Please ensure they are correct.</p>
+                          </div>
+                        </div>
+                        <Separator orientation='vertical' className="h-auto hidden md:block" />
+                        <Separator className="block md:hidden"/>
+                        <div className="w-full md:w-1/2">
+                           <h4 className="font-medium text-foreground">Available Items</h4>
+                           <p className="text-xs text-muted-foreground mb-4">Previews use your entered repository. Please ensure it is public.</p>
+                           <ScrollArea className="h-72">
+                             <div className="space-y-4 pr-4">
+                                {BADGE_OPTIONS.map((badge) => (
+                                  <div key={badge.id}>
+                                    <div className="flex items-center space-x-3">
+                                      <Checkbox
+                                        id={`badge-${badge.id}`}
+                                        value={badge.value}
+                                        checked={selectedBadges.includes(badge.value)}
+                                        onCheckedChange={(checked) => handleBadgeChange(badge.value, !!checked)}
+                                      />
+                                      <Label htmlFor={`badge-${badge.id}`} className="font-normal text-sm flex-1 cursor-pointer">
+                                        <div className="flex items-center gap-2">
+                                          <badge.icon className="h-4 w-4 text-muted-foreground" />
+                                          {badge.label}
+                                        </div>
+
+                                      </Label>
+                                       <Image src={badge.previewUrl.replace('user/repo', repoPath)} alt={`${badge.label} badge preview`} width={80} height={20} unoptimized className="rounded-sm"/>
+                                    </div>
+                                    {badge.inputLabel && selectedBadges.includes(badge.value) && (
+                                      <div className="relative pl-7 mt-2">
+                                        <Input
+                                            type={badge.inputType || 'text'}
+                                            placeholder={badge.placeholder}
+                                            required={selectedBadges.includes(badge.value)}
+                                            value={getBadgeInputValue(badge.id)}
+                                            onChange={e => setBadgeInputValue(badge.id, e.target.value)}
+                                            className="h-8"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                             </div>
+                           </ScrollArea>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={() => setIsBadgeDialogOpen(false)}>Done</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </CardContent>
+              </Card>
+              
+              <SubmitButton isGenerating={isGenerating} hasExistingDocs={!!documentation} isDisabled={isGenerateDisabled} />
+            </div>
+          )}
         </form>
 
         {summary && !isGenerating && !isFinalizing && (

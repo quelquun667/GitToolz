@@ -43,6 +43,7 @@ import { Switch } from './ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
+import { getRepoFileContent } from '@/services/github';
 
 
 const DOC_SECTIONS = [
@@ -168,6 +169,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   
   const formRef = useRef<HTMLFormElement>(null);
+  const [isCopied, setIsCopied] = useState(false);
   
   const isConfigurationDisabled = !branch || isFetchingTree;
   const repoPath = useMemo(() => extractRepoPath(repoUrl), [repoUrl]);
@@ -213,7 +215,29 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                 if (result.error) {
                     throw new Error(result.error);
                 }
-                setFileTree(result.tree || []);
+                const tree = result.tree || [];
+                setFileTree(tree);
+
+                // Check for package.json and license
+                if (tree.includes('package.json')) {
+                    const content = await getRepoFileContent(repoUrl, branch, 'package.json');
+                    if (content) {
+                        try {
+                            const pkg = JSON.parse(content);
+                            if (pkg.license) {
+                                setSelectedBadges(prev => {
+                                    if (!prev.includes('License')) {
+                                        return [...prev, 'License'];
+                                    }
+                                    return prev;
+                                });
+                            }
+                        } catch (e) {
+                            console.warn("Failed to parse package.json");
+                        }
+                    }
+                }
+
             } catch (e) {
                 const error = e instanceof Error ? e.message : 'Failed to fetch repository file tree.';
                 toast({ variant: 'destructive', title: 'Error', description: error });
@@ -236,12 +260,14 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
   }, [editedDocumentation]);
 
   const handleCopy = () => {
-    if (editedDocumentation === null) return;
+    if (editedDocumentation === null || isCopied) return;
     navigator.clipboard.writeText(editedDocumentation).then(() => {
+      setIsCopied(true);
       toast({
         title: 'Copied!',
         description: 'The markdown has been copied to your clipboard.',
       });
+      setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
@@ -420,7 +446,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                   <ScrollArea className="h-32 w-full">
                     <div className="flex-1 space-y-1 text-sm text-muted-foreground">
                       {generationLog.map((log, index) => (
-                        <p key={index} dangerouslySetInnerHTML={{ __html: log }} />
+                        <p key={index} className="animate-in fade-in slide-in-from-bottom-2 duration-500" dangerouslySetInnerHTML={{ __html: log }} />
                       ))}
                     </div>
                   </ScrollArea>
@@ -468,7 +494,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                 </TabsList>
               </div>
                <TabsContent value="documentation" className="flex-1 flex flex-col overflow-auto mt-0">
-                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-end p-4 border-b bg-muted/50">
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 border-b bg-muted/50">
                      <div className="flex items-center space-x-2">
                         <Label htmlFor="view-mode" className={cn("text-sm", viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground')}>Raw</Label>
                         <Switch
@@ -480,8 +506,8 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                         <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy
+                          {isCopied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                          {isCopied ? 'Copied!' : 'Copy'}
                         </Button>
                         <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
                           <Download className="mr-2 h-4 w-4" />

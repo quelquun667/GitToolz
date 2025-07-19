@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon, Search, ListChecks, GitBranch, CheckCircle2 } from 'lucide-react';
+import { Download, Globe, Loader2, History, Copy, Terminal, RefreshCw, Sparkles, Calendar as CalendarIcon, Search, ListChecks, GitBranch, CheckCircle2, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -62,6 +62,8 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
   
   const [displayStartDate, setDisplayStartDate] = useState<Date | undefined>();
   const [displayEndDate, setDisplayEndDate] = useState<Date | undefined>();
+  
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     // Set default branch when branches are loaded
@@ -212,9 +214,11 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
   };
 
   const handleCopy = () => {
-    if (changelog === null) return;
+    if (changelog === null || isCopied) return;
     navigator.clipboard.writeText(changelog).then(() => {
+      setIsCopied(true);
       toast({ title: 'Copied!', description: 'The changelog has been copied to your clipboard.' });
+      setTimeout(() => setIsCopied(false), 2000);
     });
   };
 
@@ -275,7 +279,7 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                   <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
                   <ScrollArea className="h-32 w-full">
                     <div className="flex-1 space-y-1 text-sm text-muted-foreground">
-                      {generationLog.map((log, index) => <p key={index}>{log}</p>)}
+                      {generationLog.map((log, index) => <p key={index} className="animate-in fade-in slide-in-from-bottom-2 duration-500">{log}</p>)}
                     </div>
                   </ScrollArea>
                 </div>
@@ -307,7 +311,10 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                 <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayStartDate, "PPP")}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayEndDate, "PPP")}</span></CardDescription>
               </div>
                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
+                  <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                    {isCopied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                    {isCopied ? 'Copied!' : 'Copy'}
+                  </Button>
                   <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
                 </div>
             </CardHeader>

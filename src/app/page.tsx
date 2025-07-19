@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -11,6 +12,7 @@ import TestGenerator from '@/components/test-generator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
   const { toast } = useToast();
@@ -185,6 +187,43 @@ export default function Home() {
               </Button>
             </div>
             {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+              <h3 className="text-center text-lg font-medium text-foreground">
+                  What can GitToolz do?
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                  <div className="flex flex-col items-center space-y-2">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                          <FileCode2 className="h-6 w-6" />
+                      </div>
+                      <p className="font-semibold">Generate Documentation</p>
+                      <p className="text-sm text-muted-foreground">
+                          Create a complete README.md from your repository's structure and content.
+                      </p>
+                  </div>
+                  <div className="flex flex-col items-center space-y-2">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                          <History className="h-6 w-6" />
+                      </div>
+                      <p className="font-semibold">Create Changelogs</p>
+                      <p className="text-sm text-muted-foreground">
+                          Analyze commit history to automatically generate a structured changelog.
+                      </p>
+                  </div>
+                  <div className="flex flex-col items-center space-y-2">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                          <TestTube2 className="h-6 w-6" />
+                      </div>
+                      <p className="font-semibold">Generate Test Cases</p>
+                      <p className="text-sm text-muted-foreground">
+                          Instantly create unit tests for your functions with AI-powered analysis.
+                      </p>
+                  </div>
+              </div>
           </div>
         </CardContent>
       </Card>

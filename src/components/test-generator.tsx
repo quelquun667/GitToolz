@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from '@/lib/utils';
 import { streamTestCasesAction } from '@/app/actions';
+import { Checkbox } from './ui/checkbox';
+import { Separator } from './ui/separator';
 
 const SUPPORTED_FRAMEWORKS = [
   'Jest',
@@ -51,6 +53,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   const [isFetchingFunctions, setIsFetchingFunctions] = useState(false);
   const [functionName, setFunctionName] = useState('');
   const [testFramework, setTestFramework] = useState('Jest');
+  const [testEntireFile, setTestEntireFile] = useState(false);
 
   const [generatedTests, setGeneratedTests] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -73,6 +76,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         setFilePath('');
         setFunctions([]);
         setFunctionName('');
+        setTestEntireFile(false);
         try {
           const result = await getRepoTree({ repoUrl, branch });
           if (result.error) {
@@ -110,8 +114,10 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                  if ((result.functions || []).length === 0) {
                     toast({
                         title: "No Functions Found",
-                        description: "The AI couldn't detect any functions in this file. You can still enter a name manually.",
+                        description: "The AI couldn't detect any functions in this file. You can test the entire file.",
+                        duration: 5000,
                     });
+                    setTestEntireFile(true);
                 }
             } catch (e: any) {
                 toast({ variant: 'destructive', title: 'Error', description: e.message });
@@ -124,8 +130,9 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   }, [filePath, branch, repoUrl, toast]);
   
   const handleGenerate = async () => {
-    if (!filePath || !functionName || !testFramework) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a file, a function, and choose a framework.' });
+    const finalFunctionName = testEntireFile ? '[Entire File]' : functionName;
+    if (!filePath || !finalFunctionName || !testFramework) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please complete all required fields.' });
       return;
     }
     
@@ -138,7 +145,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         repoUrl,
         branch,
         filePath,
-        functionName,
+        functionName: finalFunctionName,
         testFramework
       });
 
@@ -297,13 +304,14 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     }
 
     if (generatedTests) {
+      const targetName = functionName === "[Entire File]" ? filePath : functionName;
       return (
         <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
               <CardTitle>Generated Tests</CardTitle>
               <CardDescription>
-                For <span className="font-mono bg-muted px-1 py-0.5 rounded">{functionName}</span> in <span className="font-mono bg-muted px-1 py-0.5 rounded">{filePath}</span>
+                For <span className="font-mono bg-muted px-1 py-0.5 rounded">{targetName}</span>
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -344,7 +352,9 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   };
 
   const isConfigDisabled = !branch || isFetchingTree;
-  
+  const showSecondStep = filePath && !isFetchingFunctions;
+  const isGenerateDisabled = isGenerating || !filePath || (!testEntireFile && !functionName);
+
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
       <aside className="w-full md:w-[450px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
@@ -367,12 +377,15 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
             </div>
             <div className="space-y-2">
                <Label htmlFor="file" className="flex items-center gap-2"><FileCode2 className="h-4 w-4 text-primary" />File Path</Label>
-               <FileSelectorDialog />
+               <div className="flex items-center gap-2">
+                 <FileSelectorDialog />
+                 {isFetchingTree && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+               </div>
             </div>
           </CardContent>
         </Card>
         
-        <fieldset className="space-y-6 disabled:opacity-60" disabled={isConfigDisabled || !filePath}>
+        {showSecondStep && (
             <Card className="shadow-lg">
                 <CardHeader>
                     <CardTitle>2. Configure Test</CardTitle>
@@ -384,18 +397,23 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                           <Workflow className="h-4 w-4 text-primary" />
                           Function / Class Name
                         </Label>
-                         <div className="flex items-center gap-2">
-                            <Select onValueChange={setFunctionName} value={functionName} disabled={isFetchingFunctions || functions.length === 0}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder={isFetchingFunctions ? "Analyzing file..." : "Select a function"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {functions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            {isFetchingFunctions && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+                        <div className="flex items-center gap-2">
+                          <Select onValueChange={setFunctionName} value={functionName} disabled={isFetchingFunctions || testEntireFile || functions.length === 0}>
+                              <SelectTrigger>
+                                  <SelectValue placeholder={isFetchingFunctions ? "Analyzing file..." : "Select a function"} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  {functions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                          {isFetchingFunctions && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
                         </div>
                     </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="entireFile" checked={testEntireFile} onCheckedChange={(checked) => setTestEntireFile(!!checked)} />
+                        <Label htmlFor="entireFile" className="text-sm font-normal">Test entire file</Label>
+                    </div>
+                    <Separator />
                      <div className="space-y-2">
                         <Label htmlFor="testFramework">Test Framework</Label>
                         <Select onValueChange={setTestFramework} value={testFramework}>
@@ -407,13 +425,12 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                             </SelectContent>
                         </Select>
                     </div>
+                     <Button onClick={handleGenerate} className="w-full" disabled={isGenerateDisabled}>
+                      {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Tests</>}
+                    </Button>
                 </CardContent>
             </Card>
-
-            <Button onClick={handleGenerate} className="w-full" disabled={isGenerating || !functionName}>
-              {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Tests</>}
-            </Button>
-        </fieldset>
+        )}
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">

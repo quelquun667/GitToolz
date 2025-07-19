@@ -3,7 +3,7 @@
 /**
  * @fileOverview Test case generation flow.
  * 
- * - generateTestCases - A function that generates test cases for a specific function in a file.
+ * - generateTestCases - A function that generates test cases for a specific function or an entire file.
  * - GenerateTestCasesInput - The input type for the generateTestCases function.
  * - GenerateTestCasesOutput - The type for a chunk of the streaming output.
  */
@@ -16,7 +16,7 @@ const GenerateTestCasesInputSchema = z.object({
   repoUrl: z.string().describe('The URL of the Git repository.'),
   branch: z.string().describe('The branch or tag to analyze.'),
   filePath: z.string().describe('The path to the file containing the function to test.'),
-  functionName: z.string().describe('The name of the function or class to generate tests for.'),
+  functionName: z.string().describe('The name of the function or class to generate tests for. If set to "[Entire File]", test all functions.'),
   testFramework: z.string().describe('The testing framework to use (e.g., Jest, Vitest, Pytest).'),
   fileContent: z.string().optional().describe('The full content of the file to be analyzed.'),
 });
@@ -35,11 +35,15 @@ const generateTestCasesPrompt = ai.definePrompt({
   output: { schema: z.object({ testCases: z.string() }) },
   prompt: `You are an expert Quality Assurance Engineer specializing in writing comprehensive and effective unit tests.
 
-Your task is to generate a suite of test cases for a specific function within a given file.
+Your task is to generate a suite of test cases for a specific target within a given file.
 
 - Testing Framework: {{{testFramework}}}
 - File Path: {{{filePath}}}
+{{#ifneq functionName "[Entire File]"}}
 - Function/Class to Test: {{{functionName}}}
+{{else}}
+- Target: The entire file. You should generate tests for all functions and classes found.
+{{/ifneq}}
 
 Here is the content of the file:
 \`\`\`
@@ -48,13 +52,13 @@ Here is the content of the file:
 
 Please generate the test cases following these guidelines:
 1.  **Use the specified testing framework ({{{testFramework}}}).** The syntax must be correct for this framework.
-2.  **Cover multiple scenarios:**
+2.  **Cover multiple scenarios for each function:**
     -   **Happy Path:** Test with typical, expected inputs.
     -   **Edge Cases:** Test with boundary values (e.g., empty strings, 0, null, undefined, large numbers).
     -   **Error Handling:** Test how the function behaves with invalid inputs.
 3.  **Clarity:** Write clear and descriptive test descriptions (e.g., \`it('should return the sum of two positive numbers')\`).
 4.  **Structure:** The output should be a single, complete block of code that can be directly added to a test file. Do not include any explanatory text or prose outside of the code block. Start the response directly with the code block (e.g., \`\`\`javascript\`).
-5.  **Imports:** Include any necessary imports at the top of the test file.
+5.  **Imports:** Include any necessary imports at the top of the test file. Make sure to correctly import the functions/classes being tested from their source file ({{{filePath}}}).
 
 Generate the test code now.`,
 });
@@ -72,7 +76,11 @@ export async function* generateTestCases(
       throw new Error(`Could not read file content for: ${input.filePath}`);
     }
 
-    yield { status: `Analyzing function \`${input.functionName}\`...` };
+    if (input.functionName === '[Entire File]') {
+        yield { status: `Analyzing all functions in the file...` };
+    } else {
+        yield { status: `Analyzing function \`${input.functionName}\`...` };
+    }
     yield { status: 'Generating test cases with AI...' };
 
     const finalInput = { ...input, fileContent };

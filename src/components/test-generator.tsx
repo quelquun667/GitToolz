@@ -8,11 +8,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2, Workflow } from 'lucide-react';
+import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2, Workflow, BookText } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
-import { getRepoTree } from '@/app/actions';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +33,11 @@ const SUPPORTED_FRAMEWORKS = [
   'Cypress',
 ];
 
+type TestResult = {
+  explanation: string;
+  code: string;
+}
+
 type TestGeneratorProps = {
   repoUrl: string;
   branches: string[];
@@ -54,7 +58,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   const [testFramework, setTestFramework] = useState('Jest');
   const [testEntireFile, setTestEntireFile] = useState(false);
 
-  const [generatedTests, setGeneratedTests] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
@@ -77,11 +81,16 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         setFunctionName('');
         setTestEntireFile(false);
         try {
-          const result = await getRepoTree({ repoUrl, branch });
-          if (result.error) {
+          const response = await fetch('/api/fetch-tree', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repoUrl, branch }),
+          });
+          const result = await response.json();
+          if (result.error || !response.ok) {
             throw new Error(result.error);
           }
-          const sourceFiles = result.tree?.filter(f => f.match(/\.(js|ts|jsx|tsx|py)$/i)) || [];
+          const sourceFiles = result.tree?.filter((f: string) => f.match(/\.(js|ts|jsx|tsx|py)$/i)) || [];
           setFileTree(sourceFiles);
         } catch (e: any) {
           toast({ variant: 'destructive', title: 'Error', description: e.message });
@@ -136,7 +145,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     }
     
     setIsGenerating(true);
-    setGeneratedTests(null);
+    setTestResult(null);
     setGenerationLog([]);
 
     try {
@@ -181,8 +190,8 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                 if (parsed.status) {
                     setGenerationLog(prev => [...prev, parsed.status]);
                 }
-                if (parsed.testCases) {
-                    setGeneratedTests(parsed.testCases);
+                if (parsed.code && parsed.explanation) {
+                    setTestResult({ code: parsed.code, explanation: parsed.explanation });
                 }
               } catch (e) {
                 console.error("Failed to parse stream data chunk:", data, e);
@@ -204,16 +213,16 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     }
   };
 
-  const handleCopy = () => {
-    if (!generatedTests) return;
-    navigator.clipboard.writeText(generatedTests).then(() => {
-      toast({ title: 'Copied!', description: 'The test code has been copied to your clipboard.' });
+  const handleCopy = (content: string) => {
+    if (!content) return;
+    navigator.clipboard.writeText(content).then(() => {
+      toast({ title: 'Copied!', description: 'The content has been copied to your clipboard.' });
     });
   };
 
   const handleDownload = () => {
-    if (!generatedTests) return;
-    const blob = new Blob([generatedTests], { type: 'text/plain;charset=utf-t' });
+    if (!testResult?.code) return;
+    const blob = new Blob([testResult.code], { type: 'text/plain;charset=utf-t' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -307,44 +316,59 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
       );
     }
 
-    if (generatedTests) {
-      const targetName = functionName === "[Entire File]" ? filePath : functionName;
+    if (testResult) {
+      const targetName = testEntireFile ? filePath : functionName;
       return (
-        <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <div>
-              <CardTitle>Generated Tests</CardTitle>
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
+          <Card className="flex flex-col shadow-lg overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BookText className="h-5 w-5" /> Explanation</CardTitle>
               <CardDescription>
-                For <span className="font-mono bg-muted px-1 py-0.5 rounded">{targetName}</span>
+                Step-by-step breakdown of the generated tests.
               </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
-              <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
-            </div>
-          </CardHeader>
-          <div className="flex-1 overflow-auto p-0 border-t">
-              <div className="prose prose-invert max-w-none break-words h-full">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                  pre({node, ...props}) {
-                    return <pre {...props} style={{ margin: 0, borderRadius: 0, height: '100%', whiteSpace: 'pre-wrap' }} />
-                  },
-                  code({node, className, children, ...props}) {
-                    const language = className?.replace('language-', '');
-                    return <code {...props} className={`${className} text-sm`} style={{whiteSpace: 'pre-wrap'}}>{children}</code>
-                  }
-                }}>
-                  {generatedTests}
-                </ReactMarkdown>
+            </CardHeader>
+            <ScrollArea className="flex-1 border-t">
+              <div className="p-6 prose prose-invert max-w-none break-words">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{testResult.explanation}</ReactMarkdown>
               </div>
-          </div>
-        </Card>
+            </ScrollArea>
+          </Card>
+
+          <Card className="flex flex-col shadow-lg overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2"><FileCode2 className="h-5 w-5" /> Test Code</CardTitle>
+                <CardDescription>
+                  For <span className="font-mono bg-muted px-1 py-0.5 rounded">{targetName}</span>
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => handleCopy(testResult.code)} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
+                <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
+              </div>
+            </CardHeader>
+            <div className="flex-1 overflow-auto border-t">
+                <div className="prose prose-invert max-w-none break-words h-full">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+                    pre({node, ...props}) {
+                      return <pre {...props} style={{ margin: 0, borderRadius: 0, height: '100%', whiteSpace: 'pre-wrap' }} />
+                    },
+                    code({node, className, children, ...props}) {
+                      return <code {...props} className={`${className || ''} text-sm`} style={{whiteSpace: 'pre-wrap'}}>{children}</code>
+                    }
+                  }}>
+                    {testResult.code}
+                  </ReactMarkdown>
+                </div>
+            </div>
+          </Card>
+        </div>
       );
     }
 
     return (
       <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
-        <div className="text-center">
+        <div className="text-center p-4">
           <TestTube2 className="mx-auto h-12 w-12 text-muted-foreground" />
           <h3 className="mt-4 text-lg font-medium">Test Case Generator</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -355,8 +379,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     );
   };
 
-  const isConfigDisabled = !branch || isFetchingTree;
-  const showSecondStep = filePath && !isFetchingFunctions;
+  const showSecondStep = filePath && !isFetchingTree;
   const isGenerateDisabled = isGenerating || !filePath || (!testEntireFile && !functionName);
 
   return (
@@ -437,7 +460,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         )}
       </aside>
       
-      <main className="flex-1 flex flex-col p-4 md:pl-0">
+      <main className="flex-1 flex flex-col p-4 md:pl-0 gap-4">
         {renderMainContent()}
       </main>
     </div>

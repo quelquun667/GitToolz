@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, CheckCircle2 } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, CheckCircle2, Github } from 'lucide-react';
 import DocumentationGenerator from '@/components/documentation-generator';
 import ChangelogGenerator from '@/components/changelog-generator';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,10 @@ export default function Home() {
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
   const [isFetchingBranches, setIsFetchingBranches] = useState(false);
+
+  // TODO: Replace with NextAuth session
+  const session = null;
+  const status = 'unauthenticated';
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRepoUrl(e.target.value);
@@ -83,7 +87,27 @@ export default function Home() {
     }
   }
 
+  const renderWelcomeScreen = () => (
+      <Card className="w-full max-w-2xl mx-auto shadow-2xl">
+        <CardContent className="p-8 space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">Welcome to GitToolz</h2>
+            <p className="text-muted-foreground">Sign in with GitHub to access your repositories and start generating documentation.</p>
+          </div>
+          <Button className="w-full">
+            <Github className="mr-2 h-5 w-5" />
+            Sign in with GitHub
+          </Button>
+        </CardContent>
+      </Card>
+  )
+
   const renderContent = () => {
+    // For now, we bypass the auth check and directly show the URL input
+    // if (status !== 'authenticated' && !validatedRepoUrl) {
+    //   return renderWelcomeScreen();
+    // }
+      
     if (validatedRepoUrl && branches.length > 0) {
       return (
         <Tabs defaultValue="documentation" className="w-full max-w-7xl mx-auto">
@@ -121,7 +145,7 @@ export default function Home() {
       <Card className="w-full max-w-2xl mx-auto shadow-2xl">
         <CardContent className="p-8 space-y-6">
           <div className="text-center">
-            <h2 className="text-2xl font-bold">Welcome to GitToolz</h2>
+             <h2 className="text-2xl font-bold">GitToolz</h2>
             <p className="text-muted-foreground">Enter a public GitHub repository URL to get started.</p>
           </div>
           <div className="space-y-2">

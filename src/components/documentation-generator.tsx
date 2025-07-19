@@ -466,68 +466,70 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                       Files Found ({fileTree.length})
                     </TabsTrigger>
                 </TabsList>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="view-mode" className={viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground'}>Raw</Label>
-                    <Switch
-                      id="view-mode"
-                      checked={viewMode === 'preview'}
-                      onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
-                    />
-                    <Label htmlFor="view-mode" className={viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground'}>Preview</Label>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy
-                    </Button>
-                    <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
               </div>
-               <TabsContent value="documentation" className="flex-1 overflow-auto mt-0">
-                  <div className="p-6">
-                    {viewMode === 'preview' ? (
-                      <div className="prose prose-invert max-w-none break-words">
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            h2: ({node, ...props}) => {
-                              const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
-                              const id = slugify(childText);
-                              return <h2 id={id} {...props} />;
-                            },
-                            img: ({node, src, ...props}) => {
-                              if (!src) return <img {...props} alt="" />;
-
-                              const isBadge = src.includes('shields.io') || src.includes('star-history.com');
-                              if (isBadge) {
-                                // eslint-disable-next-line @next/next/no-img-element
-                                return <img src={src} {...props} alt={props.alt || ""} style={{ display: 'inline-block', margin: '0 0.25em' }} />;
-                              }
-                              
-                              const isAbsolute = src.startsWith('http');
-                              const imageUrl = isAbsolute ? src : getRawImageUrl(repoPath, branch, src);
-                              
-                              return <Image src={imageUrl} alt={props.alt || ''} width={800} height={400} className="rounded-md" unoptimized />;
-                            }
-                          }}
-                        >
-                          {editedDocumentation}
-                        </ReactMarkdown>
+               <TabsContent value="documentation" className="flex-1 flex flex-col overflow-auto mt-0">
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-end p-4 border-b bg-muted/50">
+                     <div className="flex items-center space-x-2">
+                        <Label htmlFor="view-mode" className={cn("text-sm", viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground')}>Raw</Label>
+                        <Switch
+                          id="view-mode"
+                          checked={viewMode === 'preview'}
+                          onCheckedChange={(checked) => setViewMode(checked ? 'preview' : 'raw')}
+                        />
+                        <Label htmlFor="view-mode" className={cn("text-sm", viewMode === 'preview' ? 'text-primary' : 'text-muted-foreground')}>Preview</Label>
                       </div>
-                    ) : (
-                      <Textarea
-                        value={editedDocumentation}
-                        onChange={(e) => setEditedDocumentation(e.target.value)}
-                        className="w-full h-full min-h-full"
-                        rows={1}
-                      />
-                    )}
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                          <Copy className="mr-2 h-4 w-4" />
+                          Copy
+                        </Button>
+                        <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </Button>
+                      </div>
                   </div>
+                  <ScrollArea className="flex-1">
+                    <div className="p-6">
+                      {viewMode === 'preview' ? (
+                        <div className="prose prose-invert max-w-none break-words">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              h2: ({node, ...props}) => {
+                                const childText = props.children && typeof props.children[0] === 'string' ? props.children[0] : '';
+                                const id = slugify(childText);
+                                return <h2 id={id} {...props} />;
+                              },
+                              img: ({node, src, ...props}) => {
+                                if (!src) return <img {...props} alt="" />;
+
+                                const isBadge = src.includes('shields.io') || src.includes('star-history.com');
+                                if (isBadge) {
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  return <img src={src} {...props} alt={props.alt || ""} style={{ display: 'inline-block', margin: '0 0.25em' }} />;
+                                }
+                                
+                                const isAbsolute = src.startsWith('http');
+                                const imageUrl = isAbsolute ? src : getRawImageUrl(repoPath, branch, src);
+                                
+                                return <Image src={imageUrl} alt={props.alt || ''} width={800} height={400} className="rounded-md" unoptimized />;
+                              }
+                            }}
+                          >
+                            {editedDocumentation}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <Textarea
+                          value={editedDocumentation}
+                          onChange={(e) => setEditedDocumentation(e.target.value)}
+                          className="w-full h-full min-h-full font-mono"
+                          rows={1}
+                        />
+                      )}
+                    </div>
+                  </ScrollArea>
               </TabsContent>
               <TabsContent value="files" className="flex-1 overflow-auto mt-0">
                 <ScrollArea className="h-full">

@@ -1,4 +1,5 @@
 
+
 import { Octokit } from '@octokit/rest';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -103,22 +104,20 @@ export async function getRepoFileContent(repoUrl: string, branch: string, path: 
             repo,
             path,
             ref: branch,
+            mediaType: {
+                format: "raw",
+            },
         });
         
-        const data: any = response.data;
+        // When using "raw" media type, the content is directly in response.data
+        if (typeof response.data === 'string') {
+            return response.data;
+        }
 
+        // Fallback for non-raw (though less likely with the mediaType option)
+        const data: any = response.data;
         if (data.encoding === 'base64' && data.content) {
             return Buffer.from(data.content, 'base64').toString('utf-8');
-        }
-
-        // Handling for raw content already being a string (e.g. via media type header)
-        if (typeof data === 'string') {
-            return data;
-        }
-
-        // Fallback for cases where content might be in an unexpected format
-        if (data.content) {
-            return data.content;
         }
 
         return null;
@@ -159,5 +158,35 @@ export async function getRepoCommitsByDate(repoUrl: string, branch: string, star
         }
         console.error('GitHub API Error:', error);
         throw new Error('Failed to fetch commits from GitHub.');
+    }
+}
+
+export async function getRepoDiff(repoUrl: string, base: string, head: string): Promise<string | null> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const response = await octokit.rest.repos.compareCommitsWithBasehead({
+            owner,
+            repo,
+            basehead: `${base}...${head}`,
+            mediaType: {
+                format: "diff",
+            },
+        });
+        
+        if (response.status === 200 && typeof response.data === 'string') {
+            return response.data;
+        }
+        
+        return null;
+
+    } catch(error: any) {
+        if (error.status === 404) {
+            throw new Error(`Could not compare references. One of "${base}" or "${head}" may not exist.`);
+        }
+        if (error.status === 401) {
+           throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+        }
+        console.error('GitHub API Error fetching diff:', error);
+        throw new Error('Failed to fetch diff from GitHub.');
     }
 }

@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2, Workflow, BookText } from 'lucide-react';
+import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2, Workflow, BookText, Check, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
@@ -43,6 +43,41 @@ type TestGeneratorProps = {
   branches: string[];
 };
 
+const FrameworkInfoDialog = () => (
+    <Dialog>
+        <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Info className="h-4 w-4 text-muted-foreground" />
+            </Button>
+        </DialogTrigger>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>How to Choose a Test Framework?</DialogTitle>
+                <DialogDescription>
+                    A test framework provides tools and structure to write and run tests efficiently.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-4 text-sm">
+                <div>
+                    <h4 className="font-semibold text-foreground">For JavaScript / TypeScript (Frontend or Node.js)</h4>
+                    <ul className="mt-2 list-disc pl-5 space-y-1 text-muted-foreground">
+                        <li><span className="font-semibold text-foreground">Jest & Vitest:</span> Best for modern web apps (React, Vue, Node.js). Vitest is known for its speed. Good default choices.</li>
+                        <li><span className="font-semibold text-foreground">Cypress:</span> Use this to test user interactions in a real browser (e.g., clicking buttons, filling forms). It tests the whole application, not just a single function.</li>
+                        <li><span className="font-semibold text-foreground">Mocha & Jasmine:</span> Older, solid frameworks. Choose them if your project already uses them.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 className="font-semibold text-foreground">For Python</h4>
+                    <ul className="mt-2 list-disc pl-5 space-y-1 text-muted-foreground">
+                        <li><span className="font-semibold text-foreground">Pytest:</span> The standard choice for Python. It's simple, powerful, and widely used.</li>
+                    </ul>
+                </div>
+            </div>
+        </DialogContent>
+    </Dialog>
+);
+
+
 export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps) {
   const { toast } = useToast();
 
@@ -62,6 +97,8 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationLog, setGenerationLog] = useState<string[]>([]);
+  
+  const [isCodeCopied, setIsCodeCopied] = useState(false);
   
   useEffect(() => {
     if (branches.length > 0) {
@@ -149,18 +186,17 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     setGenerationLog([]);
 
     try {
-      const response = await fetch('/api/generate-tests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repoUrl,
-          branch,
-          filePath,
-          functionName: finalFunctionName,
-          testFramework
-        }),
-      });
-
+        const response = await fetch('/api/generate-tests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              repoUrl,
+              branch,
+              filePath,
+              functionName: finalFunctionName,
+              testFramework
+            }),
+        });
 
       if (!response.body) throw new Error('No response body');
       
@@ -214,9 +250,11 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   };
 
   const handleCopy = (content: string) => {
-    if (!content) return;
+    if (!content || isCodeCopied) return;
     navigator.clipboard.writeText(content).then(() => {
-      toast({ title: 'Copied!', description: 'The content has been copied to your clipboard.' });
+      setIsCodeCopied(true);
+      toast({ title: 'Copied!', description: 'The code has been copied to your clipboard.' });
+      setTimeout(() => setIsCodeCopied(false), 2000);
     });
   };
 
@@ -293,7 +331,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                   <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
                   <ScrollArea className="h-32 w-full">
                     <div className="flex-1 space-y-1 text-sm text-muted-foreground">
-                      {generationLog.map((log, index) => <p key={index}>{log}</p>)}
+                      {generationLog.map((log, index) => <p key={index} className="animate-in fade-in slide-in-from-bottom-2 duration-500">{log}</p>)}
                     </div>
                   </ScrollArea>
                 </div>
@@ -343,7 +381,10 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                 </CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button onClick={() => handleCopy(testResult.code)} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
+                <Button onClick={() => handleCopy(testResult.code)} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary">
+                    {isCodeCopied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                    {isCodeCopied ? 'Copied!' : 'Copy'}
+                </Button>
                 <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
               </div>
             </CardHeader>
@@ -442,7 +483,10 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                     </div>
                     <Separator />
                      <div className="space-y-2">
-                        <Label htmlFor="testFramework">Test Framework</Label>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="testFramework">Test Framework</Label>
+                            <FrameworkInfoDialog />
+                        </div>
                         <Select onValueChange={setTestFramework} value={testFramework}>
                             <SelectTrigger id="testFramework" className="w-full">
                                 <SelectValue placeholder="Select a framework" />

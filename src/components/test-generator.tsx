@@ -22,7 +22,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { cn } from '@/lib/utils';
-import { streamTestCasesAction } from '@/app/actions';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
 
@@ -141,13 +140,18 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     setGenerationLog([]);
 
     try {
-      const response = await streamTestCasesAction({
-        repoUrl,
-        branch,
-        filePath,
-        functionName: finalFunctionName,
-        testFramework
+      const response = await fetch('/api/generate-tests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoUrl,
+          branch,
+          filePath,
+          functionName: finalFunctionName,
+          testFramework
+        }),
       });
+
 
       if (!response.body) throw new Error('No response body');
       

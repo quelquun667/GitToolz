@@ -8,16 +8,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2 } from 'lucide-react';
+import { Download, Globe, Loader2, Copy, Terminal, RefreshCw, Sparkles, Search, ListChecks, GitBranch, CheckCircle2, FileCode2, TestTube2, Workflow } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Input } from './ui/input';
-import { getRepoFileContent, getRepoTree } from '@/services/github';
+import { getRepoTree } from '@/app/actions';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -48,6 +47,8 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
   
   const [filePath, setFilePath] = useState('');
+  const [functions, setFunctions] = useState<string[]>([]);
+  const [isFetchingFunctions, setIsFetchingFunctions] = useState(false);
   const [functionName, setFunctionName] = useState('');
   const [testFramework, setTestFramework] = useState('Jest');
 
@@ -70,9 +71,14 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
         setIsFetchingTree(true);
         setFileTree([]);
         setFilePath('');
+        setFunctions([]);
+        setFunctionName('');
         try {
-          const result = await getRepoTree(repoUrl, branch);
-          const sourceFiles = result.filter(f => f.path.match(/\.(js|ts|jsx|tsx|py)$/i)).map(f => f.path);
+          const result = await getRepoTree({ repoUrl, branch });
+          if (result.error) {
+            throw new Error(result.error);
+          }
+          const sourceFiles = result.tree?.filter(f => f.match(/\.(js|ts|jsx|tsx|py)$/i)) || [];
           setFileTree(sourceFiles);
         } catch (e: any) {
           toast({ variant: 'destructive', title: 'Error', description: e.message });
@@ -83,10 +89,43 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     };
     fetchTree();
   }, [branch, repoUrl, toast]);
+
+  useEffect(() => {
+    const fetchFunctions = async () => {
+        if (filePath && branch && repoUrl) {
+            setIsFetchingFunctions(true);
+            setFunctions([]);
+            setFunctionName('');
+            try {
+                const response = await fetch('/api/extract-functions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoUrl, branch, filePath }),
+                });
+                const result = await response.json();
+                if (result.error || !response.ok) {
+                    throw new Error(result.error || 'Failed to extract functions.');
+                }
+                setFunctions(result.functions || []);
+                 if ((result.functions || []).length === 0) {
+                    toast({
+                        title: "No Functions Found",
+                        description: "The AI couldn't detect any functions in this file. You can still enter a name manually.",
+                    });
+                }
+            } catch (e: any) {
+                toast({ variant: 'destructive', title: 'Error', description: e.message });
+            } finally {
+                setIsFetchingFunctions(false);
+            }
+        }
+    };
+    fetchFunctions();
+  }, [filePath, branch, repoUrl, toast]);
   
   const handleGenerate = async () => {
     if (!filePath || !functionName || !testFramework) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a file, enter a function name, and choose a framework.' });
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a file, a function, and choose a framework.' });
       return;
     }
     
@@ -279,6 +318,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                     return <pre {...props} style={{ margin: 0, borderRadius: 0, height: '100%', whiteSpace: 'pre-wrap' }} />
                   },
                   code({node, className, children, ...props}) {
+                    const language = className?.replace('language-', '');
                     return <code {...props} className={`${className} text-sm`} style={{whiteSpace: 'pre-wrap'}}>{children}</code>
                   }
                 }}>
@@ -318,7 +358,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
               <Label htmlFor="branch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch to Analyze</Label>
               <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0 || isFetchingTree}>
                   <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a branch" />
+                      <SelectValue placeholder={isFetchingTree ? "Loading branches..." : "Select a branch"} />
                   </SelectTrigger>
                   <SelectContent>
                       {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
@@ -340,13 +380,21 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="functionName">Function / Class Name</Label>
-                        <Input 
-                          id="functionName"
-                          placeholder="e.g., calculateTotal"
-                          value={functionName}
-                          onChange={(e) => setFunctionName(e.target.value)}
-                        />
+                        <Label htmlFor="functionName" className="flex items-center gap-2">
+                          <Workflow className="h-4 w-4 text-primary" />
+                          Function / Class Name
+                        </Label>
+                         <div className="flex items-center gap-2">
+                            <Select onValueChange={setFunctionName} value={functionName} disabled={isFetchingFunctions || functions.length === 0}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={isFetchingFunctions ? "Analyzing file..." : "Select a function"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {functions.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            {isFetchingFunctions && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+                        </div>
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="testFramework">Test Framework</Label>
@@ -362,7 +410,7 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                 </CardContent>
             </Card>
 
-            <Button onClick={handleGenerate} className="w-full" disabled={isGenerating}>
+            <Button onClick={handleGenerate} className="w-full" disabled={isGenerating || !functionName}>
               {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Tests</>}
             </Button>
         </fieldset>

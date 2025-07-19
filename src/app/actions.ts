@@ -1,3 +1,4 @@
+
 'use server';
 
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
@@ -5,7 +6,8 @@ import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
 import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
 import { extractFunctions } from '@/ai/flows/extract-functions-flow';
-import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService } from '@/services/github';
+import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
+import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService, getRepoDiff } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -58,6 +60,13 @@ const extractFunctionsSchema = z.object({
   repoUrl: z.string().url(),
   branch: z.string(),
   filePath: z.string().min(1, { message: 'File path is required.' }),
+});
+
+const commitHelperSchema = z.object({
+    repoUrl: z.string().url(),
+    compareMode: z.enum(['branches', 'commit']),
+    base: z.string().min(1),
+    compare: z.string().optional(),
 });
 
 
@@ -259,4 +268,39 @@ export async function extractFunctionsAction(
     const error = e instanceof Error ? e.message : 'An unknown error occurred while extracting functions.';
     return { error };
   }
+}
+
+export async function commitHelperAction(
+    input: z.infer<typeof commitHelperSchema>
+): Promise<{ suggestions?: any[]; summary?: string; diff?: string; error?: string }> {
+    const validatedFields = commitHelperSchema.safeParse(input);
+    if (!validatedFields.success) {
+        return { error: 'Invalid input.' };
+    }
+
+    try {
+        const { repoUrl, compareMode, base, compare } = validatedFields.data;
+        
+        let diff: string | null;
+        if (compareMode === 'branches') {
+            // Compare two branches
+            if (!compare) return { error: 'Compare branch is required.' };
+            diff = await getRepoDiff(repoUrl, base, compare);
+        } else {
+            // Compare a commit to its parent
+            diff = await getRepoDiff(repoUrl, `${base}^`, base);
+        }
+
+        if (diff === null || diff.trim() === '') {
+            return { error: 'No differences found between the selected references.' };
+        }
+        
+        const { suggestions, summary } = await suggestCommitMessage({ diff });
+        
+        return { suggestions, summary, diff };
+
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+        return { error };
+    }
 }

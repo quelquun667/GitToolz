@@ -25,7 +25,8 @@ export type GenerateTestCasesInput = z.infer<typeof GenerateTestCasesInputSchema
 
 const GenerateTestCasesOutputSchema = z.object({
   status: z.string().optional().describe('The current status of the generation process.'),
-  testCases: z.string().optional().describe('The final generated test cases as a block of code.'),
+  explanation: z.string().optional().describe('A step-by-step explanation of the generated tests.'),
+  code: z.string().optional().describe('The final generated test code as a block of code.'),
   error: z.string().optional().describe('An error message if something went wrong.'),
 });
 export type GenerateTestCasesOutput = z.infer<typeof GenerateTestCasesOutputSchema>;
@@ -33,10 +34,13 @@ export type GenerateTestCasesOutput = z.infer<typeof GenerateTestCasesOutputSche
 const generateTestCasesPrompt = ai.definePrompt({
   name: 'generateTestCasesPrompt',
   input: { schema: GenerateTestCasesInputSchema },
-  output: { schema: z.object({ testCases: z.string() }) },
+  output: { schema: z.object({ 
+    explanation: z.string().describe("A step-by-step explanation of the test cases being generated. Use Markdown for formatting. Explain what each group of tests does (e.g., happy path, edge cases, error handling)."),
+    code: z.string().describe("The complete block of test code, formatted for the specified framework. This should be a single string containing the entire code block.") 
+  }) },
   prompt: `You are an expert Quality Assurance Engineer specializing in writing comprehensive and effective unit tests.
 
-Your task is to generate a suite of test cases for a specific target within a given file.
+Your task is to generate a suite of test cases for a specific target within a given file, and also provide a clear explanation of the tests.
 
 - Testing Framework: {{{testFramework}}}
 - File Path: {{{filePath}}}
@@ -51,17 +55,22 @@ Here is the content of the file:
 {{{fileContent}}}
 \`\`\`
 
-Please generate the test cases following these guidelines:
-1.  **Use the specified testing framework ({{{testFramework}}}).** The syntax must be correct for this framework.
-2.  **Cover multiple scenarios for each function:**
-    -   **Happy Path:** Test with typical, expected inputs.
-    -   **Edge Cases:** Test with boundary values (e.g., empty strings, 0, null, undefined, large numbers).
-    -   **Error Handling:** Test how the function behaves with invalid inputs.
-3.  **Clarity:** Write clear and descriptive test descriptions (e.g., \`it('should return the sum of two positive numbers')\`).
-4.  **Structure:** The output should be a single, complete block of code that can be directly added to a test file. Do not include any explanatory text or prose outside of the code block. Start the response directly with the code block (e.g., \`\`\`javascript\`).
-5.  **Imports:** Include any necessary imports at the top of the test file. Make sure to correctly import the functions/classes being tested from their source file ({{{filePath}}}).
+Please generate the test cases and the explanation following these guidelines:
 
-Generate the test code now.`,
+1.  **Explanation First:**
+    *   Provide a step-by-step explanation in Markdown.
+    *   Start with a brief overview of the testing strategy.
+    *   Organize the explanation into logical sections (e.g., "Happy Path Tests", "Edge Case Scenarios", "Error Handling").
+    *   For each section, briefly describe what the tests in that section are designed to verify.
+
+2.  **Code Block Second:**
+    *   **Use the specified testing framework ({{{testFramework}}}).** The syntax must be correct for this framework.
+    *   **Cover multiple scenarios:** Happy Path, Edge Cases (e.g., empty strings, 0, null, undefined), and Error Handling.
+    *   **Clarity:** Write clear and descriptive test descriptions (e.g., \`it('should return the sum of two positive numbers')\`).
+    *   **Structure:** The output code should be a single, complete block that can be directly added to a test file. Do not include any explanatory text outside of the code block itself.
+    *   **Imports:** Include any necessary imports at the top of the test file. Make sure to correctly import the functions/classes being tested from their source file ({{{filePath}}}).
+
+Generate the JSON output with the 'explanation' and 'code' fields now.`,
 });
 
 export async function* generateTestCases(
@@ -89,12 +98,12 @@ export async function* generateTestCases(
     const finalInput = { ...input, fileContent, isEntireFile };
     const { output } = await generateTestCasesPrompt(finalInput);
 
-    if (!output?.testCases) {
-      throw new Error('AI failed to generate test case content.');
+    if (!output?.code || !output?.explanation) {
+      throw new Error('AI failed to generate complete test case content.');
     }
 
     yield { status: 'Finalizing test suite...' };
-    yield { testCases: output.testCases };
+    yield { explanation: output.explanation, code: output.code };
     yield { status: 'Done.' };
 
   } catch (e) {

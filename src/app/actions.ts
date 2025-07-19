@@ -4,6 +4,7 @@ import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flo
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
 import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
+import { extractFunctions } from '@/ai/flows/extract-functions-flow';
 import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService } from '@/services/github';
 import { z } from 'zod';
 
@@ -51,6 +52,12 @@ const testCaseFormSchema = z.object({
   filePath: z.string().min(1, { message: 'File path is required.' }),
   functionName: z.string().min(1, { message: 'Function name is required.' }),
   testFramework: z.string().min(1, { message: 'Test framework is required.' }),
+});
+
+const extractFunctionsSchema = z.object({
+  repoUrl: z.string().url(),
+  branch: z.string(),
+  filePath: z.string().min(1, { message: 'File path is required.' }),
 });
 
 
@@ -227,4 +234,29 @@ export async function streamTestCasesAction(
   });
 
   return stream;
+}
+
+export async function extractFunctionsAction(
+  input: z.infer<typeof extractFunctionsSchema>
+): Promise<{ functions?: string[], error?: string }> {
+  const validatedFields = extractFunctionsSchema.safeParse(input);
+  if (!validatedFields.success) {
+    return { error: 'Invalid input.' };
+  }
+
+  try {
+    const fileContent = await getRepoFileContent(
+      validatedFields.data.repoUrl,
+      validatedFields.data.branch,
+      validatedFields.data.filePath
+    );
+    if (!fileContent) {
+      throw new Error('Could not read file content.');
+    }
+    const { functions } = await extractFunctions({ fileContent });
+    return { functions };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred while extracting functions.';
+    return { error };
+  }
 }

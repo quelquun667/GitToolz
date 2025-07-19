@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
+
 
 type Commit = {
   sha: string;
@@ -300,108 +302,117 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
 
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
-      <aside className="w-full md:w-[450px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>1. Repository Details</CardTitle>
-            <CardDescription>Select a branch and date range to find commits.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="branch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch to Analyze</Label>
-              <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
-                  <SelectTrigger className="w-full">
-                      <SelectValue placeholder={"Select a branch"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                      {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
-                  </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate">Start Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate">End Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <Button onClick={handleFetchCommits} className="w-full" disabled={isFetchDisabled}>
-              {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {allCommits.length > 0 && (
-          <Card className="shadow-lg flex-1 flex flex-col">
+    <TooltipProvider>
+      <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
+        <aside className="w-full md:w-[450px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
+          <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>2. Select Commits</CardTitle>
-              <CardDescription>Choose which commits to include in the changelog. {totalSelected} of {allCommits.length} selected.</CardDescription>
+              <CardTitle>1. Repository Details</CardTitle>
+              <CardDescription>Select a branch and date range to find commits.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow overflow-hidden flex flex-col gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="select-all"
-                  checked={totalSelected === allCommits.length}
-                  onCheckedChange={(checked) => {
-                    const newSelection: Record<string, boolean> = {};
-                    allCommits.forEach(c => newSelection[c.sha] = !!checked);
-                    setSelectedCommits(newSelection);
-                  }}
-                />
-                <Label htmlFor="select-all">Select All</Label>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="branch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch to Analyze</Label>
+                <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder={"Select a branch"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                    </SelectContent>
+                </Select>
               </div>
-              <Separator />
-              <ScrollArea className="flex-1">
-                <div className="space-y-2 pr-4">
-                  {allCommits.map(commit => (
-                    <div key={commit.sha} className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50">
-                      <Checkbox
-                        id={commit.sha}
-                        checked={selectedCommits[commit.sha] || false}
-                        onCheckedChange={(checked) => {
-                          setSelectedCommits(prev => ({...prev, [commit.sha]: !!checked}))
-                        }}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor={commit.sha} className="font-normal text-sm block cursor-pointer">{commit.message.split('\n')[0]}</Label>
-                        <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+                  </Popover>
                 </div>
-              </ScrollArea>
-              <Button onClick={handleGenerateChangelog} className="w-full" disabled={isGenerating || totalSelected === 0}>
-                {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Changelog</>}
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              <Button onClick={handleFetchCommits} className="w-full" disabled={isFetchDisabled}>
+                {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
               </Button>
             </CardContent>
           </Card>
-        )}
-      </aside>
-      
-      <main className="flex-1 flex flex-col p-4 md:pl-0">
-        {renderMainContent()}
-      </main>
-    </div>
+
+          {allCommits.length > 0 && (
+            <Card className="shadow-lg flex-1 flex flex-col">
+              <CardHeader>
+                <CardTitle>2. Select Commits</CardTitle>
+                <CardDescription>Choose which commits to include in the changelog. {totalSelected} of {allCommits.length} selected.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow overflow-hidden flex flex-col gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all"
+                    checked={totalSelected === allCommits.length}
+                    onCheckedChange={(checked) => {
+                      const newSelection: Record<string, boolean> = {};
+                      allCommits.forEach(c => newSelection[c.sha] = !!checked);
+                      setSelectedCommits(newSelection);
+                    }}
+                  />
+                  <Label htmlFor="select-all">Select All</Label>
+                </div>
+                <Separator />
+                <ScrollArea className="flex-1">
+                  <div className="space-y-2 pr-4">
+                    {allCommits.map(commit => (
+                      <Tooltip key={commit.sha} delayDuration={300}>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50">
+                            <Checkbox
+                              id={commit.sha}
+                              checked={selectedCommits[commit.sha] || false}
+                              onCheckedChange={(checked) => {
+                                setSelectedCommits(prev => ({...prev, [commit.sha]: !!checked}))
+                              }}
+                              className="mt-1"
+                            />
+                            <div className="flex-1">
+                              <Label htmlFor={commit.sha} className="font-normal text-sm block cursor-pointer">{commit.message.split('\n')[0]}</Label>
+                              <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-md" side="right">
+                          <p className="text-sm whitespace-pre-wrap">{commit.message}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <Button onClick={handleGenerateChangelog} className="w-full" disabled={isGenerating || totalSelected === 0}>
+                  {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Changelog</>}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </aside>
+        
+        <main className="flex-1 flex flex-col p-4 md:pl-0">
+          {renderMainContent()}
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }

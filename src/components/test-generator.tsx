@@ -335,14 +335,14 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
           </Card>
 
           <Card className="flex flex-col shadow-lg overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <div>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+              <div className="flex-grow">
                 <CardTitle className="flex items-center gap-2"><FileCode2 className="h-5 w-5" /> Test Code</CardTitle>
                 <CardDescription>
                   For <span className="font-mono bg-muted px-1 py-0.5 rounded">{targetName}</span>
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button onClick={() => handleCopy(testResult.code)} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
                 <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
               </div>

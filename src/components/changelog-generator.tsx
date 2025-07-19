@@ -301,12 +301,12 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
     if (changelog !== null && displayStartDate && displayEndDate) {
       return (
          <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
-           <CardHeader className="flex flex-row items-center justify-between gap-4">
-              <div>
+           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4">
+              <div className="flex-grow">
                 <CardTitle>Changelog</CardTitle>
                 <CardDescription>From <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayStartDate, "PPP")}</span> to <span className="font-mono bg-muted px-1 py-0.5 rounded">{format(displayEndDate, "PPP")}</span></CardDescription>
               </div>
-               <div className="flex gap-2">
+               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <Button onClick={handleCopy} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Copy className="mr-2 h-4 w-4" />Copy</Button>
                   <Button onClick={handleDownload} variant="outline" size="sm" className="text-primary border-primary hover:bg-primary/10 hover:text-primary"><Download className="mr-2 h-4 w-4" />Download</Button>
                 </div>
@@ -413,41 +413,40 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                 <ScrollArea className="flex-1">
                   <div className="space-y-2 pr-4">
                     {allCommits.map(commit => {
+                      const commitContent = (
+                        <div>
+                          <Label htmlFor={commit.sha} className="font-normal text-sm block cursor-pointer">{commit.message.split('\n')[0]}</Label>
+                          <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
+                        </div>
+                      );
+
                       const commitRow = (
                         <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 w-full">
-                          <Checkbox
-                            id={commit.sha}
-                            checked={selectedCommits[commit.sha] || false}
-                            onCheckedChange={(checked) => {
-                              setSelectedCommits(prev => ({ ...prev, [commit.sha]: !!checked }))
-                            }}
-                            className="mt-1"
-                          />
-                          <div className="flex-1">
+                           <Checkbox
+                                id={commit.sha}
+                                checked={selectedCommits[commit.sha] || false}
+                                onCheckedChange={(checked) => {
+                                setSelectedCommits(prev => ({ ...prev, [commit.sha]: !!checked }))
+                                }}
+                                className="mt-1"
+                            />
                             {isMobile ? (
-                              <CommitDetailsModal commit={commit}>
-                                <div>
-                                  <Label htmlFor={commit.sha} className="font-normal text-sm block cursor-pointer">{commit.message.split('\n')[0]}</Label>
-                                  <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
-                                </div>
-                              </CommitDetailsModal>
+                                <CommitDetailsModal commit={commit}>
+                                    <div className="flex-1">{commitContent}</div>
+                                </CommitDetailsModal>
                             ) : (
-                              <div>
-                                <Label htmlFor={commit.sha} className="font-normal text-sm block cursor-pointer">{commit.message.split('\n')[0]}</Label>
-                                <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
-                              </div>
+                                <div className="flex-1">{commitContent}</div>
                             )}
-                          </div>
                         </div>
                       );
 
                       return (
                         <div key={commit.sha}>
-                          {isMobile ? commitRow : (
-                            <CommitTooltip commit={commit}>
-                              {commitRow}
-                            </CommitTooltip>
-                          )}
+                           {isMobile ? commitRow : (
+                                <CommitTooltip commit={commit}>
+                                    {commitRow}
+                                </CommitTooltip>
+                           )}
                         </div>
                       )
                     })}

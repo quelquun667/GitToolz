@@ -18,6 +18,15 @@ import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 
 type Commit = {
@@ -33,6 +42,7 @@ type ChangelogGeneratorProps = {
 
 export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGeneratorProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Step 1: Form state
   const [branch, setBranch] = useState('');
@@ -225,6 +235,36 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
   
   const totalSelected = Object.values(selectedCommits).filter(Boolean).length;
   const isFetchDisabled = !repoUrl || !branch || isFetchingCommits;
+  
+  const CommitItemWrapper = ({ commit, children }: { commit: Commit, children: React.ReactNode }) => {
+    if (isMobile) {
+      return (
+        <Dialog>
+          <DialogTrigger asChild>{children}</DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Commit Details</DialogTitle>
+              <DialogDescription>
+                <span className="font-mono bg-muted px-1 py-0.5 rounded text-sm">{commit.sha.substring(0, 7)}</span> by {commit.author}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 text-sm whitespace-pre-wrap bg-muted/50 p-4 rounded-md">
+              {commit.message}
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    return (
+      <Tooltip key={commit.sha} delayDuration={300}>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent className="max-w-md" side="right">
+          <p className="text-sm whitespace-pre-wrap">{commit.message}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
 
   const renderMainContent = () => {
     if (isGenerating) {
@@ -377,9 +417,8 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                 <ScrollArea className="flex-1">
                   <div className="space-y-2 pr-4">
                     {allCommits.map(commit => (
-                      <Tooltip key={commit.sha} delayDuration={300}>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50">
+                       <CommitItemWrapper key={commit.sha} commit={commit}>
+                          <div className="flex items-start space-x-3 p-2 rounded-md hover:bg-muted/50 w-full">
                             <Checkbox
                               id={commit.sha}
                               checked={selectedCommits[commit.sha] || false}
@@ -393,11 +432,7 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                               <p className="text-xs text-muted-foreground">by {commit.author} - {commit.sha.substring(0, 7)}</p>
                             </div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-md" side="right">
-                          <p className="text-sm whitespace-pre-wrap">{commit.message}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                      </CommitItemWrapper>
                     ))}
                   </div>
                 </ScrollArea>
@@ -416,3 +451,5 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
     </TooltipProvider>
   );
 }
+
+    

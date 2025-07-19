@@ -3,7 +3,8 @@
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
-import { getRepoBranches, getRepoCommitsByDate, getRepoTree as getRepoTreeService, validateRepo as validateRepoService } from '@/services/github';
+import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
+import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -43,6 +44,15 @@ const fetchTreeSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }),
   branch: z.string().min(1, { message: 'Branch is required.' }),
 });
+
+const testCaseFormSchema = z.object({
+  repoUrl: z.string().url(),
+  branch: z.string(),
+  filePath: z.string().min(1, { message: 'File path is required.' }),
+  functionName: z.string().min(1, { message: 'Function name is required.' }),
+  testFramework: z.string().min(1, { message: 'Test framework is required.' }),
+});
+
 
 export async function getRepoTree(
   input: z.infer<typeof fetchTreeSchema>
@@ -184,6 +194,36 @@ export async function streamChangelogAction(
       }
       controller.close();
     }
+  });
+
+  return stream;
+}
+
+export async function streamTestCasesAction(
+  input: Omit<GenerateTestCasesInput, 'fileContent'>
+): Promise<ReadableStream> {
+  const validatedFields = testCaseFormSchema.safeParse(input);
+
+  if (!validatedFields.success) {
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(JSON.stringify({ error: 'Invalid input.' }));
+        controller.close();
+      },
+    });
+    return errorStream;
+  }
+  
+  const testCaseStream = generateTestCases(validatedFields.data);
+  
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of testCaseStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
   });
 
   return stream;

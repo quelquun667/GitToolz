@@ -97,19 +97,29 @@ export async function getRepoTree(repoUrl: string, branch: string): Promise<{ pa
 export async function getRepoFileContent(repoUrl: string, branch: string, path: string): Promise<string | null> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
-        const { data } = await octokit.rest.repos.getContent({
+        const response = await octokit.rest.repos.getContent({
             owner,
             repo,
             path,
             ref: branch,
-            mediaType: {
-                format: "raw",
-            },
         });
         
+        const data: any = response.data;
+
+        if (data.encoding === 'base64' && data.content) {
+            return Buffer.from(data.content, 'base64').toString('utf-8');
+        }
+
+        // Handling for raw content already being a string (e.g. via media type header)
         if (typeof data === 'string') {
             return data;
         }
+
+        // Fallback for cases where content might be in an unexpected format
+        if (data.content) {
+            return data.content;
+        }
+
         return null;
 
     } catch (error) {

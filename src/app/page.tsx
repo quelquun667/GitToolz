@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, CheckCircle2, Github } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, CheckCircle2, Github, TestTube2 } from 'lucide-react';
 import DocumentationGenerator from '@/components/documentation-generator';
 import ChangelogGenerator from '@/components/changelog-generator';
+import TestGenerator from '@/components/test-generator';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -112,7 +113,7 @@ export default function Home() {
       return (
         <Tabs defaultValue="documentation" className="w-full max-w-7xl mx-auto">
           <div className="flex justify-center mb-4">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-lg grid-cols-3">
               <TabsTrigger value="documentation">
                 <FileCode2 className="mr-2 h-4 w-4" />
                 Documentation
@@ -120,6 +121,10 @@ export default function Home() {
               <TabsTrigger value="changelog">
                 <History className="mr-2 h-4 w-4" />
                 Changelog
+              </TabsTrigger>
+               <TabsTrigger value="tests">
+                <TestTube2 className="mr-2 h-4 w-4" />
+                Tests
               </TabsTrigger>
             </TabsList>
           </div>
@@ -134,6 +139,13 @@ export default function Home() {
             <Card>
               <CardContent className="p-0">
                 <ChangelogGenerator repoUrl={validatedRepoUrl} branches={branches} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+           <TabsContent value="tests">
+            <Card>
+              <CardContent className="p-0">
+                <TestGenerator repoUrl={validatedRepoUrl} branches={branches} />
               </CardContent>
             </Card>
           </TabsContent>

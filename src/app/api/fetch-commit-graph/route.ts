@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, branch } = await request.json();
+    const { repoUrl, branch, startSha, endSha } = await request.json();
 
     if (!repoUrl || !branch) {
       return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await fetchCommitGraphAction({ repoUrl, branch });
+    const result = await fetchCommitGraphAction({ repoUrl, branch, startSha, endSha });
 
     if (result.error) {
         return new NextResponse(JSON.stringify({ error: result.error }), {

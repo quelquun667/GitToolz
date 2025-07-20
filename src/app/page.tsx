@@ -32,6 +32,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
+import FeedbackButton from '@/components/feedback-button';
 
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
@@ -444,6 +445,7 @@ export default function Home() {
       <div className="w-full flex-grow flex justify-center items-center">
         {renderContent()}
       </div>
+      <FeedbackButton />
     </main>
   );
 }

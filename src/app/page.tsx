@@ -70,7 +70,7 @@ const FeatureCarousel = ({ features, title, icon: TitleIcon }: { features: typeo
         >
             <CarouselContent className="-ml-4">
                 {features.map((feature, index) => (
-                    <CarouselItem key={index} className="pl-4 basis-full sm:basis-1/2">
+                    <CarouselItem key={index} className="pl-4 basis-full">
                         <div className="p-1 h-full">
                             <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow h-full">
                                 <feature.icon className="h-6 w-6 text-primary mb-2" />

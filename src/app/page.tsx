@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
+
+const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 12v-2h4"></path><path d="M12 10h-1.5a1.5 1.5 0 0 0 0 3H12"></path><path d="M12 15h2.5a1.5 1.5 0 0 0 0-3H12"></path></svg>
+);
 
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
@@ -445,7 +449,26 @@ export default function Home() {
       <div className="w-full flex-grow flex justify-center items-center">
         {renderContent()}
       </div>
+      <footer className="w-full max-w-7xl mx-auto pt-8 mt-auto text-center text-muted-foreground">
+          <div className="flex justify-center items-center gap-6">
+              <a href="https://github.com/quelquun667/GitToolz" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <Github className="h-4 w-4" />
+                  Source Code
+              </a>
+              <a href="https://github.com/quelquun667" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <Users className="h-4 w-4" />
+                  My GitHub
+              </a>
+              <a href="https://discord.gg/CqEzYUh48D" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-primary transition-colors">
+                 <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current"><title>Discord</title><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4464.8245-.6667 1.2839-2.6834.0276-5.4619-.0276-8.1287 0-.2203-.4594-.4557-.9086-.6667-1.2839a.0741.0741 0 00-.0785-.0371 19.7198 19.7198 0 00-4.8851 1.5152.0699.0699 0 00-.0327.0276C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0327.0549 20.0869 20.0869 0 005.9816 1.6488.0741.0741 0 00.084-.0614c.0462-.119.086-.2382.1252-.3573a.0741.0741 0 00-.0276-.084c-1.1587-.63-2.1953-1.3934-3.0954-2.264a.0741.0741 0 01.0059-.1054c.231-.176.4713-.3572.7116-.5383a.0741.0741 0 01.084.0059c4.5428 2.8021 9.643 2.8021 14.1734 0a.0741.0741 0 01.084-.0059c.2403.1811.4806.3623.7116.5383a.0741.0741 0 01.0059.1054c-.9.8706-1.9367 1.6344-3.0954 2.264a.0741.0741 0 00-.0276.084c.0392.1191.079.2383.1252.3573a.0741.0741 0 00.084.0614 20.0869 20.0869 0 005.9816-1.6488.0824.0824 0 00.0327-.0549c.5238-5.5657-.8316-10.112-.0992-13.688a.0699.0699 0 00-.0327-.0276zm-6.2201 9.4038c-1.4237 0-2.5834-1.21-2.5834-2.7052 0-1.4952 1.1597-2.7052 2.5834-2.7052s2.5834 1.21 2.5834 2.7052c0 1.4952-1.1597 2.7052-2.5834 2.7052zm-8.1287 0c-1.4237 0-2.5834-1.21-2.5834-2.7052 0-1.4952 1.1597-2.7052 2.5834-2.7052s2.5834 1.21 2.5834 2.7052c.0124 1.4952-1.1597 2.7052-2.5834 2.7052z"/></svg>
+                  Discord
+              </a>
+          </div>
+          <p className="text-xs mt-4">Built by quelquun667.</p>
+      </footer>
       <FeedbackButton />
     </main>
   );
 }
+
+    

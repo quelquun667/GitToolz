@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
 
@@ -61,32 +60,24 @@ const analysisFeatures = [
 ];
 
 
-const FeatureCarousel = ({ features, title, icon: TitleIcon }: { features: typeof assistantFeatures, title: string, icon: React.ElementType }) => (
-    <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><TitleIcon className="h-5 w-5 text-primary" /> {title}</h3>
-        <Carousel
-            opts={{ loop: true, align: 'start' }}
-            className="w-full"
-        >
-            <CarouselContent className="-ml-4">
-                {features.map((feature, index) => (
-                    <CarouselItem key={index} className="pl-4 basis-full">
-                        <div className="p-1 h-full">
-                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow h-full">
-                                <feature.icon className="h-6 w-6 text-primary mb-2" />
-                                <p className="font-semibold">{feature.title}</p>
-                                <p className="text-sm text-muted-foreground">{feature.description}</p>
-                            </div>
-                        </div>
-                    </CarouselItem>
-                ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden sm:flex" />
-            <CarouselNext className="hidden sm:flex" />
-        </Carousel>
-    </div>
+const FeatureList = ({ features, title, icon: TitleIcon }: { features: typeof assistantFeatures, title: string, icon: React.ElementType }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><TitleIcon className="h-5 w-5 text-primary" /> {title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {features.map((feature, index) => (
+          <div key={index} className="flex items-start gap-3">
+            <feature.icon className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">{feature.title}</p>
+              <p className="text-sm text-muted-foreground">{feature.description}</p>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
 );
-
 
 export default function Home() {
   const { toast } = useToast();
@@ -322,8 +313,8 @@ export default function Home() {
                     </div>
 
                     <div className="space-y-8">
-                       <FeatureCarousel features={assistantFeatures} title="AI Assistants" icon={Cpu} />
-                       <FeatureCarousel features={analysisFeatures} title="Analysis & Visualization" icon={LineChart} />
+                       <FeatureList features={assistantFeatures} title="AI Assistants" icon={Cpu} />
+                       <FeatureList features={analysisFeatures} title="Analysis & Visualization" icon={LineChart} />
                     </div>
                 </div>
             );

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -66,10 +67,10 @@ export default function AssistantView({ repoUrl, branches }: AssistantViewProps)
                <CommitHelper repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
              <ResponsiveTabs.Content value="translator">
-              <CodeTranslator />
+              <CodeTranslator repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="comments">
-              <CommentGenerator />
+              <CommentGenerator repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
           </CardContent>
         </Card>

@@ -1,16 +1,21 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, CheckCircle2, Clipboard, Copy, Check, Terminal, MessageSquareQuote } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle2, Clipboard, Copy, Check, Terminal, MessageSquareQuote, GitBranch, FileCode2, Search } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Input } from './ui/input';
+import FileIcon from './file-icon';
 
 const LANGUAGES: Record<string, string> = {
   'JavaScript': 'JSDoc',
@@ -23,12 +28,43 @@ const LANGUAGES: Record<string, string> = {
   'PHP': 'PHPDoc'
 };
 
-export default function CommentGenerator() {
+const EXT_TO_LANG: Record<string, string> = {
+  'js': 'JavaScript',
+  'jsx': 'JavaScript',
+  'ts': 'TypeScript',
+  'tsx': 'TypeScript',
+  'py': 'Python',
+  'java': 'Java',
+  'cpp': 'C++',
+  'cs': 'C#',
+  'go': 'Go',
+  'rs': 'Rust',
+  'php': 'PHP',
+  'rb': 'Ruby',
+  'swift': 'Swift',
+  'kt': 'Kotlin',
+};
+
+type CommentGeneratorProps = {
+  repoUrl: string;
+  branches: string[];
+};
+
+export default function CommentGenerator({ repoUrl, branches }: CommentGeneratorProps) {
   const { toast } = useToast();
 
+  const [inputMode, setInputMode] = useState('paste');
   const [sourceCode, setSourceCode] = useState('');
   const [language, setLanguage] = useState('JavaScript');
   
+  // Repo file state
+  const [branch, setBranch] = useState('');
+  const [fileTree, setFileTree] = useState<string[]>([]);
+  const [isFetchingTree, setIsFetchingTree] = useState(false);
+  const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
+  const [filePath, setFilePath] = useState('');
+  const [isFetchingFile, setIsFetchingFile] = useState(false);
+
   const [commentedCode, setCommentedCode] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -37,6 +73,71 @@ export default function CommentGenerator() {
   const [isCodeCopied, setIsCodeCopied] = useState(false);
   
   const commentStyle = LANGUAGES[language] || 'standard inline comments';
+
+  useEffect(() => {
+    if (branches.length > 0) {
+      const defaultBranch = branches.find(b => b === 'main' || b === 'master') || branches[0];
+      setBranch(defaultBranch);
+    }
+  }, [branches]);
+
+  useEffect(() => {
+    const fetchTree = async () => {
+      if (branch && repoUrl) {
+        setIsFetchingTree(true);
+        setFileTree([]);
+        setFilePath('');
+        setSourceCode('');
+        try {
+          const response = await fetch('/api/fetch-tree', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repoUrl, branch }),
+          });
+          const result = await response.json();
+          if (result.error || !response.ok) throw new Error(result.error);
+          const sourceFiles = result.tree?.filter((f: string) => f.match(/\.(js|ts|jsx|tsx|py|java|cpp|cs|go|rs|php|rb|swift|kt)$/i)) || [];
+          setFileTree(sourceFiles);
+        } catch (e: any) {
+          toast({ variant: 'destructive', title: 'Error fetching file tree', description: e.message });
+        } finally {
+          setIsFetchingTree(false);
+        }
+      }
+    };
+    if (inputMode === 'repo') {
+      fetchTree();
+    }
+  }, [branch, repoUrl, toast, inputMode]);
+
+  const handleFileSelect = async (selectedPath: string) => {
+    setFilePath(selectedPath);
+    setIsFileDialogOpen(false);
+    setIsFetchingFile(true);
+    setSourceCode('');
+
+    try {
+        const response = await fetch('/api/fetch-file-content', { // This API route needs to be created
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ repoUrl, branch, path: selectedPath }),
+        });
+        const result = await response.json();
+        if (result.error || !response.ok) throw new Error(result.error);
+        setSourceCode(result.content);
+
+        const extension = selectedPath.split('.').pop() || '';
+        if (EXT_TO_LANG[extension]) {
+            setLanguage(EXT_TO_LANG[extension]);
+        }
+
+    } catch(e: any) {
+        toast({ variant: 'destructive', title: 'Error fetching file content', description: e.message });
+    } finally {
+        setIsFetchingFile(false);
+    }
+  };
+
 
   const handleGenerate = async () => {
     if (!sourceCode || !language) {
@@ -114,6 +215,52 @@ export default function CommentGenerator() {
   };
 
   const isGenerateDisabled = isGenerating || !sourceCode || !language;
+
+  const FileSelectorDialog = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const filteredFiles = fileTree.filter(file => file.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    return (
+      <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isFetchingTree || fileTree.length === 0}>
+            <div className="flex items-center gap-2">
+              {filePath ? <FileIcon filename={filePath} /> : <FileCode2 className="h-4 w-4" />}
+              <span className="truncate">{filePath || 'Select a file...'}</span>
+            </div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Select a Source File</DialogTitle>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search files..." 
+              className="pl-10"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <ScrollArea className="h-96">
+            <div className="p-1">
+              {filteredFiles.map(file => (
+                <div 
+                  key={file} 
+                  onClick={() => handleFileSelect(file)}
+                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer text-sm font-mono"
+                >
+                  <FileIcon filename={file} />
+                  <span>{file}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
   const renderOutput = () => {
     if (isGenerating) {
@@ -203,23 +350,56 @@ export default function CommentGenerator() {
                     <CardDescription>Automatically add documentation comments to your code.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col">
-                    <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
-                        <Select value={language} onValueChange={setLanguage}>
-                            <SelectTrigger id="language"><SelectValue /></SelectTrigger>
-                            <SelectContent>{Object.keys(LANGUAGES).map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2 flex-1 flex flex-col">
-                        <Label htmlFor="source-code">Source Code</Label>
-                        <Textarea 
-                            id="source-code"
-                            value={sourceCode}
-                            onChange={(e) => setSourceCode(e.target.value)}
-                            placeholder="Paste your function or class here..."
-                            className="flex-1 font-mono text-xs"
-                        />
-                    </div>
+                     <Tabs value={inputMode} onValueChange={setInputMode}>
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="paste">Pasted Code</TabsTrigger>
+                            <TabsTrigger value="repo">From Repository</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="paste" className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="language-paste">Language</Label>
+                                <Select value={language} onValueChange={setLanguage}>
+                                    <SelectTrigger id="language-paste"><SelectValue /></SelectTrigger>
+                                    <SelectContent>{Object.keys(LANGUAGES).map(l => <SelectItem key={`paste-${l}`} value={l}>{l}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2 flex-1 flex flex-col">
+                                <Label htmlFor="source-code-paste">Source Code</Label>
+                                <Textarea 
+                                    id="source-code-paste"
+                                    value={sourceCode}
+                                    onChange={(e) => setSourceCode(e.target.value)}
+                                    placeholder="Paste your function or class here..."
+                                    className="flex-1 font-mono text-xs"
+                                />
+                            </div>
+                        </TabsContent>
+                        <TabsContent value="repo" className="space-y-4 pt-4">
+                           <div className="space-y-2">
+                              <Label className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch</Label>
+                              <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0 || isFetchingTree}>
+                                <SelectTrigger><SelectValue placeholder={isFetchingTree ? "Loading..." : "Select branch"} /></SelectTrigger>
+                                <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                           <div className="space-y-2">
+                              <Label className="flex items-center gap-2"><FileCode2 className="h-4 w-4 text-primary" />File</Label>
+                               <FileSelectorDialog />
+                            </div>
+                             <div className="space-y-2 flex-1 flex flex-col">
+                                <Label htmlFor="source-code-repo">Source Code</Label>
+                                <Textarea 
+                                    id="source-code-repo"
+                                    value={sourceCode}
+                                    onChange={(e) => setSourceCode(e.target.value)}
+                                    placeholder={isFetchingFile ? "Loading file content..." : "Select a file to see its content."}
+                                    className="flex-1 font-mono text-xs"
+                                    readOnly
+                                />
+                            </div>
+                        </TabsContent>
+                    </Tabs>
+
                     <Button onClick={handleGenerate} className="w-full" disabled={isGenerateDisabled}>
                         {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Comments</>}
                     </Button>

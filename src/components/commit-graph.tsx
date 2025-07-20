@@ -8,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, GitCompareArrows, GitCommitHorizontal, Calendar as CalendarIcon, Check } from 'lucide-react';
+import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, GitCommitHorizontal, Calendar as CalendarIcon, Check, Expand } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -36,7 +37,10 @@ type CommitGraphProps = {
 export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   const { toast } = useToast();
   const visJsRef = useRef<HTMLDivElement>(null);
+  const visJsModalRef = useRef<HTMLDivElement>(null);
   const networkInstanceRef = useRef<Network | null>(null);
+  const modalNetworkInstanceRef = useRef<Network | null>(null);
+
 
   const [graphMode, setGraphMode] = useState<'branch' | 'range'>('branch');
   
@@ -54,7 +58,8 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasGraph, setHasGraph] = useState(false);
+  const [graphData, setGraphData] = useState<CommitNode[] | null>(null);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
   useEffect(() => {
     if (branches.length > 0) {
@@ -122,7 +127,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     
     setIsLoading(true);
     setError(null);
-    setHasGraph(false);
+    setGraphData(null);
 
     try {
       const response = await fetch('/api/fetch-commit-graph', {
@@ -140,8 +145,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         throw new Error(result.error || 'Failed to fetch commit history.');
       }
       
-      drawGraph(result.commits);
-      setHasGraph(true);
+      setGraphData(result.commits);
 
     } catch (e: any) {
       setError(e.message);
@@ -151,12 +155,17 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     }
   };
 
-  const drawGraph = useCallback((commits: CommitNode[]) => {
-    if (!visJsRef.current) return;
+  const drawGraph = useCallback((
+    container: HTMLDivElement | null, 
+    networkRef: React.MutableRefObject<Network | null>,
+    commits: CommitNode[], 
+    isModal = false
+  ) => {
+    if (!container) return;
 
-    if (networkInstanceRef.current) {
-      networkInstanceRef.current.destroy();
-      networkInstanceRef.current = null;
+    if (networkRef.current) {
+      networkRef.current.destroy();
+      networkRef.current = null;
     }
 
     const nodes: Node[] = commits.map((commit) => ({
@@ -169,7 +178,6 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     const commitIds = new Set(commits.map(c => c.sha));
     commits.forEach(commit => {
       commit.parents.forEach(parentSha => {
-        // Only draw edges between nodes that are in the current view
         if (commitIds.has(parentSha)) {
             edges.push({
               from: commit.sha,
@@ -229,31 +237,41 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       },
     };
     
-    const network = new Network(visJsRef.current, data, options);
-    networkInstanceRef.current = network;
+    const network = new Network(container, data, options);
+    networkRef.current = network;
 
     const fitGraph = () => {
-        if (network && visJsRef.current && visJsRef.current.offsetParent) {
+        if (network && container && container.offsetParent) {
             network.fit();
         }
     };
     
-    // Using a timeout allows the container to render and have dimensions before fitting.
     setTimeout(fitGraph, 100);
     
-    // Also add a resize observer for dynamic resizing.
-    const container = visJsRef.current;
     const observer = new ResizeObserver(fitGraph);
     if(container) observer.observe(container);
 
     return () => {
       if(container) observer.unobserve(container);
-      if (network) {
-        network.destroy();
-      }
+      if (network) network.destroy();
     };
 
   }, []);
+  
+  useEffect(() => {
+    if (graphData) {
+      drawGraph(visJsRef.current, networkInstanceRef, graphData);
+    }
+  }, [graphData, drawGraph]);
+
+  useEffect(() => {
+    if (isGraphModalOpen && graphData) {
+      // Delay drawing in modal to allow it to render
+      setTimeout(() => {
+        drawGraph(visJsModalRef.current, modalNetworkInstanceRef, graphData, true);
+      }, 100);
+    }
+  }, [isGraphModalOpen, graphData, drawGraph]);
   
   const isFetchDisabled = isLoading || (graphMode === 'branch' && !branch) || (graphMode === 'range' && (!startCommit || !endCommit));
 
@@ -362,7 +380,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                                 <Select onValueChange={setStartCommit} value={startCommit}>
                                     <SelectTrigger><SelectValue placeholder="Select start commit"/></SelectTrigger>
                                     <SelectContent>
-                                        {fetchedCommits.map(c => <SelectItem key={`start-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
+                                        <ScrollArea className="h-48">
+                                          {fetchedCommits.map(c => <SelectItem key={`start-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
+                                        </ScrollArea>
                                     </SelectContent>
                                 </Select>
                              </div>
@@ -371,7 +391,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                                 <Select onValueChange={setEndCommit} value={endCommit}>
                                     <SelectTrigger><SelectValue placeholder="Select end commit"/></SelectTrigger>
                                     <SelectContent>
+                                       <ScrollArea className="h-48">
                                         {fetchedCommits.map(c => <SelectItem key={`end-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
+                                       </ScrollArea>
                                     </SelectContent>
                                 </Select>
                              </div>
@@ -397,7 +419,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
               </Alert>
             </div>
           )}
-          {!isLoading && !error && !hasGraph && (
+          {!isLoading && !error && !graphData && (
             <div className="text-center">
               <GitCommitVertical className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">Awaiting Graph Generation</h3>
@@ -410,7 +432,25 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                   <p className="mt-4 text-muted-foreground">Fetching commit history...</p>
               </div>
           )}
-          <div ref={visJsRef} className="w-full h-full" />
+          
+          <div ref={visJsRef} className={cn("w-full h-full", !graphData && "hidden")} />
+          
+          {graphData && (
+              <Dialog open={isGraphModalOpen} onOpenChange={setIsGraphModalOpen}>
+                  <DialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute top-2 right-2 z-10">
+                          <Expand className="h-5 w-5" />
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-none w-[95vw] h-[90vh] p-8 flex flex-col">
+                      <DialogHeader>
+                          <DialogTitle>Commit Graph (Fullscreen)</DialogTitle>
+                      </DialogHeader>
+                      <div ref={visJsModalRef} className="w-full h-full flex-1 rounded-md border" />
+                  </DialogContent>
+              </Dialog>
+          )}
+
         </div>
       </main>
     </div>

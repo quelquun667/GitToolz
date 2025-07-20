@@ -332,9 +332,11 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
             )}
         </div>
 
-        <Button onClick={handleGenerate} className="w-full" disabled={isGenerateDisabled}>
-          {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyse en cours...</> : <><Sparkles className="mr-2 h-4 w-4" />Générer les Suggestions</>}
-        </Button>
+        {suggestions.length === 0 && (
+          <Button onClick={handleGenerate} className="w-full" disabled={isGenerateDisabled}>
+            {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyse en cours...</> : <><Sparkles className="mr-2 h-4 w-4" />Générer les Suggestions</>}
+          </Button>
+        )}
       </aside>
       
       <main className="flex-1 flex flex-col p-4 md:pl-0">

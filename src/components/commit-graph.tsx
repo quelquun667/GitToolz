@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -7,16 +8,23 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, GitCompareArrows, GitCommitHorizontal } from 'lucide-react';
+import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, GitCompareArrows, GitCommitHorizontal, Calendar as CalendarIcon, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import CommitSelector from './commit-selector';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { ScrollArea } from './ui/scroll-area';
 
-type CommitNode = {
+type Commit = {
   sha: string;
   message: string;
   author: string | null;
+};
+
+type CommitNode = Commit & {
   parents: string[];
 };
 
@@ -31,7 +39,16 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   const networkInstanceRef = useRef<Network | null>(null);
 
   const [graphMode, setGraphMode] = useState<'branch' | 'range'>('branch');
+  
+  // Branch mode state
   const [branch, setBranch] = useState('');
+  
+  // Range mode state
+  const [rangeBranch, setRangeBranch] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [isFetchingCommits, setIsFetchingCommits] = useState(false);
+  const [fetchedCommits, setFetchedCommits] = useState<Commit[]>([]);
   const [startCommit, setStartCommit] = useState<string>('');
   const [endCommit, setEndCommit] = useState<string>('');
 
@@ -43,11 +60,43 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     if (branches.length > 0) {
       const defaultBranch = branches.includes('main') ? 'main' : branches.includes('master') ? 'master' : branches[0];
       setBranch(defaultBranch);
+      setRangeBranch(defaultBranch);
     }
   }, [branches]);
+  
+  const handleFetchRangeCommits = async () => {
+    if (!rangeBranch || !startDate || !endDate) {
+      toast({ variant: 'destructive', title: 'Information manquante', description: 'Veuillez sélectionner une branche et une plage de dates.' });
+      return;
+    }
+    setIsFetchingCommits(true);
+    setFetchedCommits([]);
+    setStartCommit('');
+    setEndCommit('');
+
+    try {
+      const response = await fetch('/api/fetch-commits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repoUrl, branch: rangeBranch, startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
+      });
+      const result = await response.json();
+      if (result.error || !response.ok) throw new Error(result.error || 'Failed to fetch commits.');
+      
+      setFetchedCommits(result.commits);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Erreur', description: e.message });
+    } finally {
+      setIsFetchingCommits(false);
+    }
+  };
+
 
   const handleFetchAndDrawGraph = async () => {
     let finalBranch = '';
+    let finalStartSha: string | undefined = undefined;
+    let finalEndSha: string | undefined = undefined;
+
     if (graphMode === 'branch') {
         if (!branch) {
             toast({ variant: 'destructive', title: 'Please select a branch.' });
@@ -59,9 +108,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
             toast({ variant: 'destructive', title: 'Please select a start and end commit.' });
             return;
         }
-        // For range, we just need a branch that contains these commits.
-        // We can use the branch from the commit selector or a default.
-        finalBranch = branch || branches[0];
+        finalBranch = rangeBranch;
+        finalStartSha = startCommit;
+        finalEndSha = endCommit;
     }
     
     setIsLoading(true);
@@ -75,8 +124,8 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         body: JSON.stringify({ 
           repoUrl, 
           branch: finalBranch,
-          startSha: graphMode === 'range' ? startCommit : undefined,
-          endSha: graphMode === 'range' ? endCommit : undefined
+          startSha: finalStartSha,
+          endSha: finalEndSha,
         }),
       });
       const result = await response.json();
@@ -176,26 +225,26 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     const network = new Network(visJsRef.current, data, options);
     networkInstanceRef.current = network;
 
-    // Fit graph to container after a short delay
-    setTimeout(() => {
-        network.fit();
-    }, 100);
-
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (networkInstanceRef.current) {
-        networkInstanceRef.current.fit();
-      }
+    const fitGraph = () => {
+        if (network) {
+            network.fit();
+        }
     };
-    window.addEventListener('resize', handleResize);
+    setTimeout(fitGraph, 100);
+    window.addEventListener('resize', fitGraph);
+    
+    const container = visJsRef.current;
+    const observer = new ResizeObserver(fitGraph);
+    if(container) observer.observe(container);
+
     return () => {
-      window.removeEventListener('resize', handleResize);
-      if (networkInstanceRef.current) {
-        networkInstanceRef.current.destroy();
+      window.removeEventListener('resize', fitGraph);
+      if(container) observer.unobserve(container);
+      if (network) {
+        network.destroy();
       }
     };
+
   }, []);
   
   const isFetchDisabled = isLoading || (graphMode === 'branch' && !branch) || (graphMode === 'range' && (!startCommit || !endCommit));
@@ -246,24 +295,64 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                     <CardTitle>Select Commit Range</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div>
-                        <Label className="text-sm text-muted-foreground">Start Commit</Label>
-                        <CommitSelector 
-                            repoUrl={repoUrl}
-                            branches={branches}
-                            onCommitSelect={setStartCommit}
-                            instanceId="start"
-                        />
+                     <div className="space-y-2">
+                        <Label>Branche</Label>
+                        <Select onValueChange={setRangeBranch} value={rangeBranch} disabled={branches.length === 0}>
+                          <SelectTrigger><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
+                          <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        </Select>
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                        <Label>Date de début</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {startDate ? format(startDate, "PPP") : <span>Date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+                        </Popover>
+                        </div>
+                        <div className="space-y-2">
+                        <Label>Date de fin</Label>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {endDate ? format(endDate, "PPP") : <span>Date</span>}
+                            </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
+                        </Popover>
+                        </div>
                     </div>
-                     <div>
-                        <Label className="text-sm text-muted-foreground">End Commit</Label>
-                        <CommitSelector 
-                            repoUrl={repoUrl}
-                            branches={branches}
-                            onCommitSelect={setEndCommit}
-                            instanceId="end"
-                        />
-                    </div>
+                    <Button onClick={handleFetchRangeCommits} className="w-full" disabled={isFetchingCommits}>
+                        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Récupération...</> : <><Search className="mr-2 h-4 w-4" />Récupérer Commits</>}
+                    </Button>
+                    {fetchedCommits.length > 0 && (
+                        <div className="space-y-4">
+                             <div className="space-y-2">
+                                <Label>Start Commit</Label>
+                                <Select onValueChange={setStartCommit} value={startCommit}>
+                                    <SelectTrigger><SelectValue placeholder="Select start commit"/></SelectTrigger>
+                                    <SelectContent>
+                                        {fetchedCommits.map(c => <SelectItem key={`start-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             </div>
+                             <div className="space-y-2">
+                                <Label>End Commit</Label>
+                                <Select onValueChange={setEndCommit} value={endCommit}>
+                                    <SelectTrigger><SelectValue placeholder="Select end commit"/></SelectTrigger>
+                                    <SelectContent>
+                                        {fetchedCommits.map(c => <SelectItem key={`end-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         )}

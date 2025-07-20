@@ -2,7 +2,7 @@
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/quelquun667/GitToolz) ![GitHub stars](https://img.shields.io/github/stars/quelquun667/GitToolz) ![GitHub watchers](https://img.shields.io/github/watchers/quelquun667/GitToolz) ![GitHub issues](https://img.shields.io/github/issues/quelquun667/GitToolz)
 
-[Visit Git Toolz](https://git-toolz.vercel.app/)
+### [Visit Git Toolz](https://git-toolz.vercel.app/)
 
 Git Toolz is an IDE-like environment designed to enhance your development workflow with Git. It provides a suite of AI-powered tools and features to help you write, analyze, and manage your code more efficiently.
 

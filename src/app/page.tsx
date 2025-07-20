@@ -190,86 +190,85 @@ export default function Home() {
         case 'url-input':
         default:
             return (
-                 <Card className="w-full max-w-2xl mx-auto shadow-2xl">
-                    <CardContent className="p-8 space-y-6">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold">GitToolz</h2>
-                        <p className="text-muted-foreground">Enter a public GitHub repository URL to get started.</p>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="repoUrl" className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-primary" />
-                        Repository URL
-                        </Label>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                        <Input 
-                            id="repoUrl" 
-                            name="repoUrl" 
-                            placeholder="https://github.com/user/repo" 
-                            required 
-                            value={repoUrl} 
-                            onChange={handleUrlChange}
-                            onKeyDown={(e) => e.key === 'Enter' && handleValidateAndFetch()}
-                            className="flex-grow"
-                        />
-                        <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating || isFetchingBranches}>
-                            {(isUrlValidating || isFetchingBranches) ? (
-                            <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Working...</>
-                            ) : (
-                            <><Search className="mr-2 h-4 w-4" />Continue</>
-                            )}
-                        </Button>
-                        </div>
-                        {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
+                <div className="w-full max-w-5xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-6">
+                        <h2 className="text-4xl font-bold tracking-tighter">Unlock Your Repository's Potential</h2>
+                        <p className="text-muted-foreground text-lg">
+                            Enter a public GitHub repository URL to generate documentation, create changelogs, suggest commits, and analyze your project with powerful AI tools.
+                        </p>
+                        <Card className="shadow-2xl">
+                            <CardContent className="p-6 space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="repoUrl" className="flex items-center gap-2">
+                                        <Globe className="h-4 w-4 text-primary" />
+                                        Repository URL
+                                    </Label>
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <Input
+                                            id="repoUrl"
+                                            name="repoUrl"
+                                            placeholder="https://github.com/user/repo"
+                                            required
+                                            value={repoUrl}
+                                            onChange={handleUrlChange}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleValidateAndFetch()}
+                                            className="flex-grow"
+                                        />
+                                        <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating || isFetchingBranches}>
+                                            {(isUrlValidating || isFetchingBranches) ? (
+                                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Working...</>
+                                            ) : (
+                                                <><Search className="mr-2 h-4 w-4" />Continue</>
+                                            )}
+                                        </Button>
+                                    </div>
+                                    {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
 
-                    <Separator />
-
-                    <div className="space-y-4">
-                        <h3 className="text-center text-lg font-medium text-foreground">
-                            What can GitToolz do?
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-                            <div className="flex flex-col items-center space-y-2">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
                                     <FileCode2 className="h-6 w-6" />
                                 </div>
-                                <p className="font-semibold">Generate Documentation</p>
+                                <p className="font-semibold text-lg">Generate Documentation</p>
                                 <p className="text-sm text-muted-foreground">
                                     Create a complete README.md from your repository's structure and content.
                                 </p>
                             </div>
-                            <div className="flex flex-col items-center space-y-2">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
                                     <History className="h-6 w-6" />
                                 </div>
-                                <p className="font-semibold">Create Changelogs</p>
+                                <p className="font-semibold text-lg">Create Changelogs</p>
                                 <p className="text-sm text-muted-foreground">
                                     Analyze commit history to automatically generate a structured changelog.
                                 </p>
                             </div>
-                            <div className="flex flex-col items-center space-y-2">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
                                     <TestTube2 className="h-6 w-6" />
                                 </div>
-                                <p className="font-semibold">Generate Test Cases</p>
+                                <p className="font-semibold text-lg">Generate Test Cases</p>
                                 <p className="text-sm text-muted-foreground">
                                     Instantly create unit tests for your functions with AI-powered analysis.
                                 </p>
                             </div>
-                            <div className="flex flex-col items-center space-y-2">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
                                     <MessageSquarePlus className="h-6 w-6" />
                                 </div>
-                                <p className="font-semibold">Suggest Commit Messages</p>
+                                <p className="font-semibold text-lg">Suggest Commit Messages</p>
                                 <p className="text-sm text-muted-foreground">
                                     Get conventional commit suggestions based on your code changes.
                                 </p>
                             </div>
                         </div>
                     </div>
-                    </CardContent>
-                </Card>
+                </div>
             );
     }
   };
@@ -291,7 +290,7 @@ export default function Home() {
           </Button>
         )}
       </header>
-      <div className="w-full flex-grow flex justify-center">
+      <div className="w-full flex-grow flex justify-center items-center">
         {renderContent()}
       </div>
     </div>

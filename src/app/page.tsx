@@ -223,7 +223,7 @@ export default function Home() {
               <h3 className="text-center text-lg font-medium text-foreground">
                   What can GitToolz do?
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
                   <div className="flex flex-col items-center space-y-2">
                       <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
                           <FileCode2 className="h-6 w-6" />
@@ -249,6 +249,15 @@ export default function Home() {
                       <p className="font-semibold">Generate Test Cases</p>
                       <p className="text-sm text-muted-foreground">
                           Instantly create unit tests for your functions with AI-powered analysis.
+                      </p>
+                  </div>
+                  <div className="flex flex-col items-center space-y-2">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                          <MessageSquarePlus className="h-6 w-6" />
+                      </div>
+                      <p className="font-semibold">Suggest Commit Messages</p>
+                      <p className="text-sm text-muted-foreground">
+                          Get conventional commit suggestions based on your code changes.
                       </p>
                   </div>
               </div>

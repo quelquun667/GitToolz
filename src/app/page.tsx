@@ -3,17 +3,15 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, CheckCircle2, Github, TestTube2, MessageSquarePlus } from 'lucide-react';
-import DocumentationGenerator from '@/components/documentation-generator';
-import ChangelogGenerator from '@/components/changelog-generator';
-import TestGenerator from '@/components/test-generator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import CommitHelper from '@/components/commit-helper';
+import AssistantView from '@/components/assistant-view';
+
+type View = 'url-input' | 'category-selection' | 'assistants';
 
 export default function Home() {
   const { toast } = useToast();
@@ -24,14 +22,13 @@ export default function Home() {
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
   const [isFetchingBranches, setIsFetchingBranches] = useState(false);
-
-  // TODO: Replace with NextAuth session
-  const session = null;
-  const status = 'unauthenticated';
   
+  const [currentView, setCurrentView] = useState<View>('url-input');
+
   useEffect(() => {
     if (validatedRepoUrl) {
-      const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+       setCurrentView('category-selection');
+       const handleBeforeUnload = (event: BeforeUnloadEvent) => {
         event.preventDefault();
         event.returnValue = "Êtes-vous sûr de vouloir quitter ? Vos configurations et résultats actuels seront perdus, et vous devrez recommencer depuis la page d'accueil.";
         return event.returnValue;
@@ -42,6 +39,8 @@ export default function Home() {
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
+    } else {
+        setCurrentView('url-input');
     }
   }, [validatedRepoUrl]);
 
@@ -106,165 +105,153 @@ export default function Home() {
       setIsFetchingBranches(false);
     }
   }
-
-  const renderWelcomeScreen = () => (
-      <Card className="w-full max-w-2xl mx-auto shadow-2xl">
-        <CardContent className="p-8 space-y-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold">Welcome to GitToolz</h2>
-            <p className="text-muted-foreground">Sign in with GitHub to access your repositories and start generating documentation.</p>
-          </div>
-          <Button className="w-full">
-            <Github className="mr-2 h-5 w-5" />
-            Sign in with GitHub
-          </Button>
-        </CardContent>
-      </Card>
-  )
+  
+  const renderCategorySelection = () => (
+      <div className="w-full max-w-4xl mx-auto space-y-8">
+        <div className="text-center">
+            <h2 className="text-2xl font-bold">Que souhaitez-vous faire ?</h2>
+            <p className="text-muted-foreground">Choisissez une catégorie pour commencer.</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
+                <CardHeader>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                            <Cpu className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <CardTitle>Assistants</CardTitle>
+                            <CardDescription>Outils IA pour générer du contenu et vous aider dans vos tâches.</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Button className="w-full" onClick={() => setCurrentView('assistants')}>
+                        Accéder aux assistants
+                    </Button>
+                </CardContent>
+            </Card>
+             <Card className="border-dashed border-border/60 text-muted-foreground transition-all duration-300">
+                <CardHeader>
+                    <div className="flex items-center gap-4 opacity-50">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-muted/50 text-muted-foreground">
+                            <LineChart className="h-6 w-6" />
+                        </div>
+                         <div>
+                            <CardTitle>Analyse & Visualisation</CardTitle>
+                            <CardDescription>Explorez votre dépôt avec des graphes et des statistiques.</CardDescription>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Button className="w-full" disabled>
+                        Bientôt disponible
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+      </div>
+  );
 
   const renderContent = () => {
-    // For now, we bypass the auth check and directly show the URL input
-    // if (status !== 'authenticated' && !validatedRepoUrl) {
-    //   return renderWelcomeScreen();
-    // }
-      
-    if (validatedRepoUrl && branches.length > 0) {
-      return (
-        <Tabs defaultValue="documentation" className="w-full max-w-7xl mx-auto">
-          <div className="flex justify-center mb-4">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
-              <TabsTrigger value="documentation">
-                <FileCode2 className="mr-2 h-4 w-4" />
-                Documentation
-              </TabsTrigger>
-              <TabsTrigger value="changelog">
-                <History className="mr-2 h-4 w-4" />
-                Changelog
-              </TabsTrigger>
-               <TabsTrigger value="tests">
-                <TestTube2 className="mr-2 h-4 w-4" />
-                Tests
-              </TabsTrigger>
-              <TabsTrigger value="commit-helper">
-                <MessageSquarePlus className="mr-2 h-4 w-4" />
-                Commit Helper
-              </TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="documentation" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-            <Card>
-              <CardContent className="p-0">
-                <DocumentationGenerator repoUrl={validatedRepoUrl} branches={branches} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="changelog" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-            <Card>
-              <CardContent className="p-0">
-                <ChangelogGenerator repoUrl={validatedRepoUrl} branches={branches} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-           <TabsContent value="tests" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-            <Card>
-              <CardContent className="p-0">
-                <TestGenerator repoUrl={validatedRepoUrl} branches={branches} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-           <TabsContent value="commit-helper" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-            <Card>
-              <CardContent className="p-0">
-                <CommitHelper repoUrl={validatedRepoUrl} branches={branches} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      );
+    switch (currentView) {
+        case 'assistants':
+            return (
+                <div className="w-full max-w-7xl mx-auto">
+                    <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Retour aux catégories
+                    </Button>
+                    <AssistantView repoUrl={validatedRepoUrl!} branches={branches} />
+                </div>
+            );
+        case 'category-selection':
+            return renderCategorySelection();
+        case 'url-input':
+        default:
+            return (
+                 <Card className="w-full max-w-2xl mx-auto shadow-2xl">
+                    <CardContent className="p-8 space-y-6">
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold">GitToolz</h2>
+                        <p className="text-muted-foreground">Enter a public GitHub repository URL to get started.</p>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="repoUrl" className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-primary" />
+                        Repository URL
+                        </Label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                        <Input 
+                            id="repoUrl" 
+                            name="repoUrl" 
+                            placeholder="https://github.com/user/repo" 
+                            required 
+                            value={repoUrl} 
+                            onChange={handleUrlChange}
+                            onKeyDown={(e) => e.key === 'Enter' && handleValidateAndFetch()}
+                            className="flex-grow"
+                        />
+                        <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating || isFetchingBranches}>
+                            {(isUrlValidating || isFetchingBranches) ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Working...</>
+                            ) : (
+                            <><Search className="mr-2 h-4 w-4" />Continue</>
+                            )}
+                        </Button>
+                        </div>
+                        {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-center text-lg font-medium text-foreground">
+                            What can GitToolz do?
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+                            <div className="flex flex-col items-center space-y-2">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                                    <FileCode2 className="h-6 w-6" />
+                                </div>
+                                <p className="font-semibold">Generate Documentation</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Create a complete README.md from your repository's structure and content.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center space-y-2">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                                    <History className="h-6 w-6" />
+                                </div>
+                                <p className="font-semibold">Create Changelogs</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Analyze commit history to automatically generate a structured changelog.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center space-y-2">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                                    <TestTube2 className="h-6 w-6" />
+                                </div>
+                                <p className="font-semibold">Generate Test Cases</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Instantly create unit tests for your functions with AI-powered analysis.
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-center space-y-2">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                                    <MessageSquarePlus className="h-6 w-6" />
+                                </div>
+                                <p className="font-semibold">Suggest Commit Messages</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Get conventional commit suggestions based on your code changes.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    </CardContent>
+                </Card>
+            );
     }
-    
-    return (
-      <Card className="w-full max-w-2xl mx-auto shadow-2xl">
-        <CardContent className="p-8 space-y-6">
-          <div className="text-center">
-             <h2 className="text-2xl font-bold">GitToolz</h2>
-            <p className="text-muted-foreground">Enter a public GitHub repository URL to get started.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="repoUrl" className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-primary" />
-              Repository URL
-            </Label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input 
-                id="repoUrl" 
-                name="repoUrl" 
-                placeholder="https://github.com/user/repo" 
-                required 
-                value={repoUrl} 
-                onChange={handleUrlChange}
-                onKeyDown={(e) => e.key === 'Enter' && handleValidateAndFetch()}
-                className="flex-grow"
-              />
-              <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating || isFetchingBranches}>
-                {(isUrlValidating || isFetchingBranches) ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Working...</>
-                ) : (
-                  <><Search className="mr-2 h-4 w-4" />Continue</>
-                )}
-              </Button>
-            </div>
-            {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
-          </div>
-
-          <Separator />
-
-          <div className="space-y-4">
-              <h3 className="text-center text-lg font-medium text-foreground">
-                  What can GitToolz do?
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-                  <div className="flex flex-col items-center space-y-2">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                          <FileCode2 className="h-6 w-6" />
-                      </div>
-                      <p className="font-semibold">Generate Documentation</p>
-                      <p className="text-sm text-muted-foreground">
-                          Create a complete README.md from your repository's structure and content.
-                      </p>
-                  </div>
-                  <div className="flex flex-col items-center space-y-2">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                          <History className="h-6 w-6" />
-                      </div>
-                      <p className="font-semibold">Create Changelogs</p>
-                      <p className="text-sm text-muted-foreground">
-                          Analyze commit history to automatically generate a structured changelog.
-                      </p>
-                  </div>
-                  <div className="flex flex-col items-center space-y-2">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                          <TestTube2 className="h-6 w-6" />
-                      </div>
-                      <p className="font-semibold">Generate Test Cases</p>
-                      <p className="text-sm text-muted-foreground">
-                          Instantly create unit tests for your functions with AI-powered analysis.
-                      </p>
-                  </div>
-                  <div className="flex flex-col items-center space-y-2">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                          <MessageSquarePlus className="h-6 w-6" />
-                      </div>
-                      <p className="font-semibold">Suggest Commit Messages</p>
-                      <p className="text-sm text-muted-foreground">
-                          Get conventional commit suggestions based on your code changes.
-                      </p>
-                  </div>
-              </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
   };
   
   return (

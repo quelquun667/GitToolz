@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +28,22 @@ export default function Home() {
   // TODO: Replace with NextAuth session
   const session = null;
   const status = 'unauthenticated';
+  
+  useEffect(() => {
+    if (validatedRepoUrl) {
+      const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        event.preventDefault();
+        event.returnValue = "Êtes-vous sûr de vouloir quitter ? Vos configurations et résultats actuels seront perdus, et vous devrez recommencer depuis la page d'accueil.";
+        return event.returnValue;
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [validatedRepoUrl]);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRepoUrl(e.target.value);

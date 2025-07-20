@@ -191,31 +191,72 @@ export async function getRepoDiff(repoUrl: string, base: string, head: string): 
     }
 }
 
-export async function getCommitHistory(repoUrl: string, branch: string): Promise<{sha: string, message: string, author: string | null, parents: string[]}[]> {
+export async function getCommitHistory(
+    repoUrl: string,
+    branch: string,
+    startSha?: string,
+    endSha?: string
+): Promise<{ sha: string; message: string; author: string | null; parents: string[] }[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
+
     try {
-        const { data } = await octokit.rest.repos.listCommits({
+        const allCommits = await octokit.paginate(octokit.rest.repos.listCommits, {
             owner,
             repo,
             sha: branch,
-            per_page: 100, // Max commits to fetch for the graph
+            per_page: 100,
         });
 
-        if (data) {
-            return data.map(commit => ({
-                sha: commit.sha,
-                message: commit.commit.message,
-                author: commit.author?.login ?? 'Unknown',
-                parents: commit.parents.map(p => p.sha),
-            }));
+        const commits = allCommits.map(commit => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            author: commit.author?.login ?? 'Unknown',
+            parents: commit.parents.map(p => p.sha),
+        }));
+
+        if (!startSha || !endSha) {
+            // If no range, return the latest 100 commits from the branch
+            return commits.slice(0, 100);
         }
 
-        return [];
-    } catch(error: any) {
+        // If a range is provided, find the commits within that range
+        const commitMap = new Map(commits.map(c => [c.sha, c]));
+        const rangeCommits: { sha: string; message: string; author: string | null; parents: string[] }[] = [];
+        const queue = [endSha];
+        const visited = new Set<string>();
+
+        while (queue.length > 0) {
+            const currentSha = queue.shift();
+            if (!currentSha || visited.has(currentSha)) continue;
+            
+            const currentCommit = commitMap.get(currentSha);
+            if (!currentCommit) continue;
+            
+            visited.add(currentSha);
+            rangeCommits.push(currentCommit);
+
+            if (currentSha === startSha) break; // Stop when we reach the start commit
+
+            for (const parent of currentCommit.parents) {
+                if (!visited.has(parent)) {
+                    queue.push(parent);
+                }
+            }
+        }
+        
+        // Also ensure start commit is included if it was missed
+        if (!visited.has(startSha)) {
+             const startCommitData = commitMap.get(startSha);
+             if (startCommitData) rangeCommits.push(startCommitData);
+        }
+
+        return rangeCommits;
+
+    } catch (error: any) {
         if (error.status === 404) {
             throw new Error(`Could not find the specified branch: "${branch}".`);
         }
-         if (error.status === 401) {
+        if (error.status === 401) {
             throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
         }
         console.error('GitHub API Error:', error);

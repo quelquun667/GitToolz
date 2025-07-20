@@ -186,13 +186,15 @@ export async function getRepoDiff(repoUrl: string, base: string, head: string): 
 
 export async function getCommitHistory(
     repoUrl: string,
-    branch: string,
+    branch: string, // Still useful as a starting point for fetching the main list
     startSha?: string,
     endSha?: string
 ): Promise<{ sha: string; message: string; author: string | null; parents: string[] }[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
 
     try {
+        // We fetch commits from the specified branch to have a good base of recent commits.
+        // The graph logic will then trace parents, potentially across branches.
         const allCommits = await octokit.paginate(octokit.rest.repos.listCommits, {
             owner,
             repo,
@@ -200,7 +202,31 @@ export async function getCommitHistory(
             per_page: 100,
         });
 
-        const commits = allCommits.map(commit => ({
+        const commitMap = new Map(allCommits.map(c => [c.sha, c]));
+        
+        // If a range is provided, we need to ensure we have all commits in that range.
+        if (startSha && endSha) {
+            const rangeCommitsResponse = await octokit.rest.repos.compareCommits({
+                owner,
+                repo,
+                base: startSha,
+                head: endSha,
+            });
+            
+            // Add commits from the comparison to our map to ensure we have them all
+            rangeCommitsResponse.data.commits.forEach(c => {
+                if (!commitMap.has(c.sha)) {
+                    commitMap.set(c.sha, c);
+                }
+            });
+             // Ensure the base commit of the comparison is also in the map
+            const baseCommitResponse = await octokit.rest.repos.getCommit({ owner, repo, ref: startSha });
+            if (!commitMap.has(baseCommitResponse.data.sha)) {
+                commitMap.set(baseCommitResponse.data.sha, baseCommitResponse.data);
+            }
+        }
+        
+        const commitsToReturn = Array.from(commitMap.values()).map(commit => ({
             sha: commit.sha,
             message: commit.commit.message,
             author: commit.author?.login ?? 'Unknown',
@@ -208,13 +234,12 @@ export async function getCommitHistory(
         }));
 
         if (!startSha || !endSha) {
-            // If no range, return the latest 100 commits from the branch
-            return commits.slice(0, 100);
+            // If no range, return the latest 100 commits from the initial branch
+            return commitsToReturn.slice(0, 100);
         }
-
-        // If a range is provided, find the commits within that range
-        const commitMap = new Map(commits.map(c => [c.sha, c]));
-        const rangeCommits: { sha: string; message: string; author: string | null; parents: string[] }[] = [];
+        
+        // If a range is provided, find the path between start and end.
+        const pathCommits: { sha: string; message: string; author: string | null; parents: string[] }[] = [];
         const queue = [endSha];
         const visited = new Set<string>();
 
@@ -222,28 +247,40 @@ export async function getCommitHistory(
             const currentSha = queue.shift();
             if (!currentSha || visited.has(currentSha)) continue;
             
-            const currentCommit = commitMap.get(currentSha);
-            if (!currentCommit) continue;
+            const currentCommitData = commitMap.get(currentSha);
+            if (!currentCommitData) continue;
             
-            visited.add(currentSha);
-            rangeCommits.push(currentCommit);
+            const currentCommit = {
+                sha: currentCommitData.sha,
+                message: currentCommitData.commit.message,
+                author: currentCommitData.author?.login ?? 'Unknown',
+                parents: currentCommitData.parents.map(p => p.sha),
+            };
 
-            if (currentSha === startSha) break; // Stop when we reach the start commit
+            visited.add(currentSha);
+            pathCommits.push(currentCommit);
+
+            if (currentSha === startSha) continue; // Don't traverse past the start
 
             for (const parent of currentCommit.parents) {
-                if (!visited.has(parent)) {
+                if (!visited.has(parent) && commitMap.has(parent)) {
                     queue.push(parent);
                 }
             }
         }
         
-        // Also ensure start commit is included if it was missed
+        // Make sure start commit is included if it was missed (e.g., if end is not a direct descendant)
         if (!visited.has(startSha)) {
              const startCommitData = commitMap.get(startSha);
-             if (startCommitData) rangeCommits.push(startCommitData);
+             if (startCommitData) pathCommits.push({
+                sha: startCommitData.sha,
+                message: startCommitData.commit.message,
+                author: startCommitData.author?.login ?? 'Unknown',
+                parents: startCommitData.parents.map(p => p.sha),
+            });
         }
-
-        return rangeCommits;
+        
+        return pathCommits.length > 0 ? pathCommits : commitsToReturn.slice(0, 100);
 
     } catch (error: any) {
         handleApiError(error, `getCommitHistory on branch "${branch}"`);

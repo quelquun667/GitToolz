@@ -409,7 +409,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       </aside>
 
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60 relative overflow-hidden">
+        <div className="flex-1 flex flex-col justify-center rounded-lg border-2 border-dashed border-border/60 relative overflow-hidden">
           {error && (
             <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/80">
               <Alert variant="destructive" className="max-w-md border-none">

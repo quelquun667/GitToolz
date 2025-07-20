@@ -65,14 +65,14 @@ const FeatureCarousel = ({ features, title, icon: TitleIcon }: { features: typeo
     <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2"><TitleIcon className="h-5 w-5 text-primary" /> {title}</h3>
         <Carousel
-            opts={{ loop: true }}
-            className="w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-none"
+            opts={{ loop: true, align: 'start' }}
+            className="w-full"
         >
-            <CarouselContent>
+            <CarouselContent className="-ml-4">
                 {features.map((feature, index) => (
-                    <CarouselItem key={index} className="md:basis-1/2">
-                        <div className="p-1">
-                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow h-36">
+                    <CarouselItem key={index} className="pl-4 basis-full sm:basis-1/2">
+                        <div className="p-1 h-full">
+                            <div className="flex flex-col items-start space-y-2 p-4 rounded-lg bg-card border hover:shadow-lg transition-shadow h-full">
                                 <feature.icon className="h-6 w-6 text-primary mb-2" />
                                 <p className="font-semibold">{feature.title}</p>
                                 <p className="text-sm text-muted-foreground">{feature.description}</p>
@@ -458,3 +458,5 @@ export default function Home() {
     </main>
   );
 }
+
+    

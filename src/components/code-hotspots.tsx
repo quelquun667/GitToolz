@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Search, AlertCircle, Flame, GitBranch, BarChartHorizontalBig } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from 'recharts';
 import FileIcon from './file-icon';
 
 type Hotspot = {
@@ -114,7 +115,7 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
                             dataKey="path" 
                             type="category" 
                             width={150} 
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} 
+                            tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }} 
                             tickFormatter={(value) => value.length > 20 ? `...${value.slice(-17)}` : value}
                         />
                         <Tooltip
@@ -126,7 +127,9 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
                             }}
                             labelStyle={{ color: 'hsl(var(--foreground))' }}
                         />
-                        <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                           <LabelList dataKey="commitCount" position="right" offset={10} className="fill-foreground font-semibold" />
+                        </Bar>
                     </BarChart>
                 </ResponsiveContainer>
              )}

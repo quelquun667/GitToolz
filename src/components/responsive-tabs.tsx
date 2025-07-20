@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -39,10 +40,14 @@ const ResponsiveTabsComponent = ({ defaultValue, tabs, children }: ResponsiveTab
       {isMobile ? (
         <Select value={activeTab} onValueChange={handleTabChange}>
           <SelectTrigger className="w-full">
-            <div className="flex items-center gap-2">
-              <ActiveIcon className="h-4 w-4" />
-              <SelectValue />
-            </div>
+            <SelectValue
+              placeholder={
+                <div className="flex items-center gap-2">
+                  <ActiveIcon className="h-4 w-4" />
+                  {tabs.find(tab => tab.value === activeTab)?.label}
+                </div>
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {tabs.map((tab) => (

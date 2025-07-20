@@ -12,6 +12,17 @@ import { Separator } from '@/components/ui/separator';
 import AssistantView from '@/components/assistant-view';
 import AnalysisView from '@/components/analysis-view';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
@@ -286,24 +297,39 @@ export default function Home() {
         <GitBranch className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">GitToolz</h1>
         {validatedRepoUrl && (
-          <TooltipProvider>
-            <Tooltip>
+          <AlertDialog>
+            <TooltipProvider>
+              <Tooltip>
                 <TooltipTrigger asChild>
+                  <AlertDialogTrigger asChild>
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={handleReset} 
                         className="absolute right-0 top-1/2 -translate-y-1/2"
                         aria-label="Start over"
                       >
                         <RotateCcw className="h-5 w-5 text-muted-foreground" />
                     </Button>
+                  </AlertDialogTrigger>
                 </TooltipTrigger>
                 <TooltipContent>
                     <p>Start over with a new repository</p>
                 </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </Tooltip>
+            </TooltipProvider>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will clear your current repository and return you to the home screen. Any unsaved work will be lost.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </header>
       <div className="w-full flex-grow flex justify-center items-center">
@@ -312,5 +338,3 @@ export default function Home() {
     </main>
   );
 }
-
-    

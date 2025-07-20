@@ -264,3 +264,72 @@ export async function getCommitHistory(
         throw new Error('Failed to fetch commits from GitHub.');
     }
 }
+
+
+// Analysis Services
+
+export async function getRepoContributors(repoUrl: string): Promise<any[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const contributors = await octokit.paginate(octokit.rest.repos.listContributors, {
+            owner,
+            repo,
+        });
+        return contributors.filter(c => c.type === 'User');
+    } catch (e: any) {
+        console.error('GitHub API Error fetching contributors:', e);
+        throw new Error('Failed to fetch contributors from GitHub.');
+    }
+}
+
+export async function getRepoFileCommits(repoUrl: string, branch: string): Promise<{ path: string; commitCount: number }[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const commits = await octokit.paginate(octokit.rest.repos.listCommits, {
+            owner,
+            repo,
+            sha: branch,
+            per_page: 100, // Look at the last 100 commits for performance
+        });
+
+        const fileCounts: Record<string, number> = {};
+
+        for (const commit of commits) {
+            const { data: commitData } = await octokit.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: commit.sha,
+            });
+
+            if (commitData.files) {
+                for (const file of commitData.files) {
+                    if (file.filename) {
+                        fileCounts[file.filename] = (fileCounts[file.filename] || 0) + 1;
+                    }
+                }
+            }
+        }
+
+        return Object.entries(fileCounts).map(([path, commitCount]) => ({ path, commitCount }));
+    } catch (e: any) {
+        console.error('GitHub API Error fetching file commits:', e);
+        throw new Error('Failed to analyze file commit history.');
+    }
+}
+
+export async function getRepoIssues(repoUrl: string): Promise<any[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+            owner,
+            repo,
+            state: 'all', // Fetch both open and closed issues
+            per_page: 100,
+        });
+        // Filter out pull requests
+        return issues.filter(issue => !issue.pull_request);
+    } catch (e: any) {
+        console.error('GitHub API Error fetching issues:', e);
+        throw new Error('Failed to fetch issues from GitHub. The repository may have issues disabled.');
+    }
+}

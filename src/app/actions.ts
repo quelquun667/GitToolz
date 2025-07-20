@@ -6,7 +6,19 @@ import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/gener
 import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
 import { extractFunctions } from '@/ai/flows/extract-functions-flow';
 import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
-import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService, getRepoDiff, getCommitHistory } from '@/services/github';
+import { analyzeIssues, type AnalyzeIssuesInput, type AnalyzeIssuesOutput } from '@/ai/flows/analyze-issues-flow';
+import { 
+  getRepoBranches, 
+  getRepoCommitsByDate, 
+  getRepoFileContent, 
+  getRepoTree as getRepoTreeService, 
+  validateRepo as validateRepoService, 
+  getRepoDiff, 
+  getCommitHistory,
+  getRepoContributors,
+  getRepoFileCommits,
+  getRepoIssues
+} from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -73,6 +85,11 @@ const commitHelperSchema = z.object({
     compareMode: z.enum(['branches', 'commit']),
     base: z.string().min(1),
     compare: z.string().optional(),
+});
+
+const analysisSchema = z.object({
+  repoUrl: z.string().url(),
+  branch: z.string(),
 });
 
 
@@ -333,5 +350,50 @@ export async function fetchCommitGraphAction(
     } catch (e) {
       const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
       return { error };
+    }
+}
+
+// Analysis Actions
+export async function getContributorStatsAction(input: z.infer<typeof analysisSchema>) {
+    const validatedFields = analysisSchema.safeParse(input);
+    if (!validatedFields.success) return { error: 'Invalid input.' };
+    try {
+        const contributors = await getRepoContributors(validatedFields.data.repoUrl);
+        return { contributors };
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+        return { error };
+    }
+}
+
+export async function getCodeHotspotsAction(input: z.infer<typeof analysisSchema>) {
+    const validatedFields = analysisSchema.safeParse(input);
+    if (!validatedFields.success) return { error: 'Invalid input.' };
+    try {
+        const hotspots = await getRepoFileCommits(validatedFields.data.repoUrl, validatedFields.data.branch);
+        return { hotspots };
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+        return { error };
+    }
+}
+
+export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>): Promise<AnalyzeIssuesOutput | { error: string }> {
+    const validatedFields = analysisSchema.safeParse(input);
+    if (!validatedFields.success) return { error: 'Invalid input.' };
+    try {
+        const issues = await getRepoIssues(validatedFields.data.repoUrl);
+        const aiInput: AnalyzeIssuesInput = {
+            issues: issues.map(issue => ({
+                title: issue.title,
+                state: issue.state,
+                labels: issue.labels.map(l => typeof l === 'string' ? l : l.name).filter((n): n is string => !!n),
+            }))
+        };
+        const analysis = await analyzeIssues(aiInput);
+        return analysis;
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+        return { error };
     }
 }

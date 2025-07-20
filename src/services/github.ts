@@ -29,18 +29,32 @@ function parseRepoUrl(url: string): { owner: string; repo: string } {
   }
 }
 
+function handleApiError(error: any, context?: string): never {
+    if (error.status === 404) {
+      throw new Error(`Repository or resource not found. Please check the URL and branch name. Context: ${context}`);
+    }
+    if (error.status === 401) {
+      throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+    }
+    if (error.status === 403) {
+      const rateLimitReset = error.response?.headers?.['x-ratelimit-reset'];
+      let message = 'GitHub API rate limit exceeded.';
+      if (rateLimitReset) {
+        const resetTime = new Date(rateLimitReset * 1000).toLocaleTimeString();
+        message += ` Please wait until ${resetTime} or use a GITHUB_TOKEN for higher limits.`;
+      }
+      throw new Error(message);
+    }
+    console.error(`GitHub API Error (${context}):`, error);
+    throw new Error(`Failed to fetch from GitHub. Context: ${context}`);
+}
+
 export async function validateRepo(repoUrl: string): Promise<void> {
   const { owner, repo } = parseRepoUrl(repoUrl);
   try {
     await octokit.rest.repos.get({ owner, repo });
   } catch (error: any) {
-    if (error.status === 404) {
-      throw new Error('Repository not found. Please check the URL.');
-    }
-    if (error.status === 401) {
-      throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-    }
-    throw new Error('Failed to access repository. Check URL and token permissions.');
+    handleApiError(error, 'validateRepo');
   }
 }
 
@@ -54,11 +68,7 @@ export async function getRepoBranches(repoUrl: string): Promise<string[]> {
         });
         return branches.map(branch => branch.name);
     } catch (error: any) {
-        if (error.status === 404) {
-            throw new Error('Repository not found when fetching branches.');
-        }
-        console.error('GitHub API Error fetching branches:', error);
-        throw new Error('Failed to fetch repository branches from GitHub.');
+        handleApiError(error, 'getRepoBranches');
     }
 }
 
@@ -83,14 +93,7 @@ export async function getRepoTree(repoUrl: string, branch: string): Promise<{ pa
         }
         return [];
     } catch (error: any) {
-        if (error.status === 404) {
-            throw new Error(`Repository not found or branch "${branch}" does not exist. Please check the URL and branch name.`);
-        }
-        if (error.status === 401) {
-            throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-        }
-        console.error('GitHub API Error:', error);
-        throw new Error('Failed to fetch repository tree from GitHub.');
+        handleApiError(error, 'getRepoTree');
     }
 }
 
@@ -154,14 +157,7 @@ export async function getRepoCommitsByDate(repoUrl: string, branch: string, star
 
         return [];
     } catch(error: any) {
-        if (error.status === 404) {
-            throw new Error(`Could not find the specified branch: "${branch}".`);
-        }
-         if (error.status === 401) {
-            throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-        }
-        console.error('GitHub API Error:', error);
-        throw new Error('Failed to fetch commits from GitHub.');
+        handleApiError(error, `getRepoCommitsByDate on branch "${branch}"`);
     }
 }
 
@@ -184,14 +180,7 @@ export async function getRepoDiff(repoUrl: string, base: string, head: string): 
         return null;
 
     } catch(error: any) {
-        if (error.status === 404) {
-            throw new Error(`Could not compare references. One of "${base}" or "${head}" may not exist.`);
-        }
-        if (error.status === 401) {
-           throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-        }
-        console.error('GitHub API Error fetching diff:', error);
-        throw new Error('Failed to fetch diff from GitHub.');
+        handleApiError(error, `getRepoDiff between "${base}" and "${head}"`);
     }
 }
 
@@ -257,14 +246,7 @@ export async function getCommitHistory(
         return rangeCommits;
 
     } catch (error: any) {
-        if (error.status === 404) {
-            throw new Error(`Could not find the specified branch: "${branch}".`);
-        }
-        if (error.status === 401) {
-            throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
-        }
-        console.error('GitHub API Error:', error);
-        throw new Error('Failed to fetch commits from GitHub.');
+        handleApiError(error, `getCommitHistory on branch "${branch}"`);
     }
 }
 
@@ -280,8 +262,7 @@ export async function getRepoContributors(repoUrl: string): Promise<any[]> {
         });
         return contributors.filter(c => c.type === 'User');
     } catch (e: any) {
-        console.error('GitHub API Error fetching contributors:', e);
-        throw new Error('Failed to fetch contributors from GitHub.');
+        handleApiError(e, 'getRepoContributors');
     }
 }
 
@@ -333,7 +314,11 @@ export async function* streamRepoFileCommits(repoUrl: string, branch: string): A
 
     } catch (e: any) {
         console.error('GitHub API Error fetching file commits:', e);
-        yield { error: 'Failed to analyze file commit history.' };
+        if (e.status === 403) {
+            yield { error: 'GitHub API rate limit exceeded. Please wait or use a GITHUB_TOKEN.' };
+        } else {
+            yield { error: 'Failed to analyze file commit history.' };
+        }
     }
 }
 
@@ -349,8 +334,10 @@ export async function getRepoIssues(repoUrl: string): Promise<any[]> {
         // Filter out pull requests
         return issues.filter(issue => !issue.pull_request);
     } catch (e: any) {
-        console.error('GitHub API Error fetching issues:', e);
-        throw new Error('Failed to fetch issues from GitHub. The repository may have issues disabled.');
+        if (e.status === 404) {
+             throw new Error('Failed to fetch issues. The repository may have issues disabled or be private.');
+        }
+        handleApiError(e, 'getRepoIssues');
     }
 }
 
@@ -391,7 +378,6 @@ export async function getRepoBranchesWithDetails(repoUrl: string, defaultBranch:
         return branchDetails;
 
     } catch (e: any) {
-        console.error('GitHub API Error fetching branch details:', e);
-        throw new Error('Failed to fetch branch details from GitHub.');
+        handleApiError(e, 'getRepoBranchesWithDetails');
     }
 }

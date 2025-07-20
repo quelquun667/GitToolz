@@ -13,9 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Input } from './ui/input';
-import FileIcon from './file-icon';
+import FileSelector from './file-selector';
 
 
 const LANGUAGES = [
@@ -62,7 +60,6 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
   const [branch, setBranch] = useState('');
   const [fileTree, setFileTree] = useState<string[]>([]);
   const [isFetchingTree, setIsFetchingTree] = useState(false);
-  const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
   const [filePath, setFilePath] = useState('');
   const [isFetchingFile, setIsFetchingFile] = useState(false);
 
@@ -111,7 +108,6 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
 
   const handleFileSelect = async (selectedPath: string) => {
     setFilePath(selectedPath);
-    setIsFileDialogOpen(false);
     setIsFetchingFile(true);
     setSourceCode('');
 
@@ -217,52 +213,6 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
     });
   };
   
-  const FileSelectorDialog = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const filteredFiles = fileTree.filter(file => file.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return (
-      <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isFetchingTree || fileTree.length === 0}>
-            <div className="flex items-center gap-2">
-              {filePath ? <FileIcon filename={filePath} /> : <FileCode2 className="h-4 w-4" />}
-              <span className="truncate">{filePath || 'Select a file...'}</span>
-            </div>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Select a Source File</DialogTitle>
-          </DialogHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search files..." 
-              className="pl-10"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <ScrollArea className="h-96">
-            <div className="p-1">
-              {filteredFiles.map(file => (
-                <div 
-                  key={file} 
-                  onClick={() => handleFileSelect(file)}
-                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer text-sm font-mono"
-                >
-                  <FileIcon filename={file} />
-                  <span>{file}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
   const isTranslateDisabled = isGenerating || !sourceCode || !sourceLanguage || !targetLanguage;
 
   const renderOutput = () => {
@@ -365,12 +315,12 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
                     <CardDescription>Translate code snippets from one language to another with AI.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 flex-1 flex flex-col">
-                  <Tabs value={inputMode} onValueChange={setInputMode}>
+                  <Tabs value={inputMode} onValueChange={setInputMode} className="flex-1 flex flex-col">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="paste">Pasted Code</TabsTrigger>
                         <TabsTrigger value="repo">From Repository</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="paste" className="space-y-4 pt-4">
+                    <TabsContent value="paste" className="space-y-4 pt-4 flex-1 flex flex-col">
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                           <div className="space-y-2">
                               <Label htmlFor="source-lang-paste">From</Label>
@@ -398,7 +348,7 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
                           />
                       </div>
                     </TabsContent>
-                     <TabsContent value="repo" className="space-y-4 pt-4">
+                     <TabsContent value="repo" className="space-y-4 pt-4 flex-1 flex flex-col">
                         <div className="space-y-2">
                           <Label className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branch</Label>
                           <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0 || isFetchingTree}>
@@ -409,7 +359,12 @@ export default function CodeTranslator({ repoUrl, branches }: CodeTranslatorProp
                         <div className="space-y-2">
                            <Label className="flex items-center gap-2"><FileCode2 className="h-4 w-4 text-primary" />File</Label>
                            <div className="flex items-center gap-2">
-                              <FileSelectorDialog />
+                                <FileSelector
+                                    fileTree={fileTree}
+                                    selectedFile={filePath}
+                                    onFileSelect={handleFileSelect}
+                                    isFetchingTree={isFetchingTree}
+                                />
                            </div>
                         </div>
                         <div className="space-y-2">

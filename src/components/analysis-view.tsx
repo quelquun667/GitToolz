@@ -2,11 +2,12 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveTabs } from '@/components/responsive-tabs';
-import { GitCommitVertical, Users, Flame, MessageCircleWarning } from 'lucide-react';
+import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge } from 'lucide-react';
 import CommitGraph from '@/components/commit-graph';
 import ContributorDashboard from './contributor-dashboard';
 import CodeHotspots from './code-hotspots';
 import IssueAnalyzer from './issue-analyzer';
+import BranchActivity from './branch-activity';
 
 type AnalysisViewProps = {
   repoUrl: string;
@@ -33,6 +34,11 @@ const analysisTabs = [
     value: "issues",
     label: "Issue Analysis",
     icon: MessageCircleWarning
+  },
+  {
+    value: "branches",
+    label: "Branch Activity",
+    icon: GitMerge,
   }
 ];
 
@@ -52,6 +58,9 @@ export default function AnalysisView({ repoUrl, branches }: AnalysisViewProps) {
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="issues">
               <IssueAnalyzer repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+             <ResponsiveTabs.Content value="branches">
+              <BranchActivity repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
           </CardContent>
         </Card>

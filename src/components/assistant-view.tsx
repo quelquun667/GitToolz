@@ -2,11 +2,13 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveTabs } from '@/components/responsive-tabs';
-import { FileCode2, History, TestTube2, MessageSquarePlus } from 'lucide-react';
+import { FileCode2, History, TestTube2, MessageSquarePlus, Languages, MessageSquareQuote } from 'lucide-react';
 import DocumentationGenerator from '@/components/documentation-generator';
 import ChangelogGenerator from '@/components/changelog-generator';
 import TestGenerator from '@/components/test-generator';
 import CommitHelper from '@/components/commit-helper';
+import CodeTranslator from './code-translator';
+import CommentGenerator from './comment-generator';
 
 type AssistantViewProps = {
   repoUrl: string;
@@ -33,6 +35,16 @@ const assistantTabs = [
     value: "commit-helper",
     label: "Commit Helper",
     icon: MessageSquarePlus
+  },
+  {
+    value: "translator",
+    label: "Translator",
+    icon: Languages,
+  },
+  {
+    value: "comments",
+    label: "Comments",
+    icon: MessageSquareQuote,
   }
 ];
 
@@ -52,6 +64,12 @@ export default function AssistantView({ repoUrl, branches }: AssistantViewProps)
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="commit-helper">
                <CommitHelper repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+             <ResponsiveTabs.Content value="translator">
+              <CodeTranslator />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="comments">
+              <CommentGenerator />
             </ResponsiveTabs.Content>
           </CardContent>
         </Card>

@@ -57,22 +57,26 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<View>('url-input');
   
   // Theme state
-  const [theme, setTheme] = useState('dark');
+  const [theme, setTheme] = useState<string | undefined>(undefined);
   const [accentColor, setAccentColor] = useState(THEME_COLORS[0].value);
 
   useEffect(() => {
-    // Set initial theme from localStorage or system preference
+    // Set initial theme from localStorage or system preference to avoid FOUC
     const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     setTheme(savedTheme);
 
-    // Set initial accent color from localStorage
-    const savedColor = localStorage.getItem('accentColor') || THEME_COLORS[0].value;
-    setAccentColor(savedColor);
+    const savedColor = localStorage.getItem('accentColor');
+    if (savedColor) {
+      setAccentColor(savedColor);
+    }
   }, []);
 
+
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
+    if (theme) {
+      document.documentElement.classList.toggle('dark', theme === 'dark');
+      localStorage.setItem('theme', theme);
+    }
   }, [theme]);
 
   useEffect(() => {
@@ -333,6 +337,10 @@ export default function Home() {
     }
   };
   
+  if (theme === undefined) {
+    return null; // or a loading spinner, to prevent FOUC
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center justify-center">
       <header className="w-full max-w-7xl mx-auto">

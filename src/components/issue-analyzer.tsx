@@ -1,13 +1,14 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Search, AlertCircle, MessageCircleWarning, GitBranch, CheckCircle, XCircle, Tag, ScrollText } from 'lucide-react';
+import { Loader2, Search, AlertCircle, MessageCircleWarning, GitBranch, CheckCircle, XCircle, Tag, ScrollText, Inbox } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from 'recharts';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -58,7 +59,13 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
         throw new Error(result.error || 'Failed to analyze issues.');
       }
       
-      setAnalysis(result);
+      // Check if there's any actual data to display
+      const totalIssues = result.totalOpen + result.totalClosed;
+      if (totalIssues === 0 && result.categorizedIssues.length === 0) {
+        setAnalysis({ totalOpen: 0, totalClosed: 0, categorizedIssues: [], keyThemes: [] });
+      } else {
+        setAnalysis(result);
+      }
 
     } catch (e: any) {
       setError(e.message);
@@ -69,6 +76,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
   };
 
   const isFetchDisabled = isLoading || !branch;
+  const noIssuesFound = analysis && analysis.totalOpen === 0 && analysis.totalClosed === 0;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-200px)] bg-card text-foreground">
@@ -115,6 +123,13 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
                 </div>
             )}
              {!isLoading && !error && analysis && (
+                noIssuesFound ? (
+                    <div className="text-center">
+                        <Inbox className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-medium">No Issues Found</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">This repository does not have any issues.</p>
+                    </div>
+                ) : (
                  <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
                         <Card>
@@ -125,7 +140,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
                                 <ResponsiveContainer width="100%" height={300}>
                                     <BarChart data={analysis.categorizedIssues} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                                         <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
                                         <Tooltip
                                             cursor={{ fill: 'hsl(var(--accent))' }}
                                             contentStyle={{ 
@@ -134,7 +149,9 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
                                                 borderRadius: 'var(--radius)'
                                             }}
                                         />
-                                        <Bar dataKey="count" name="Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="count" name="Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                                          <LabelList dataKey="count" position="top" offset={8} className="fill-foreground font-semibold" />
+                                        </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -201,6 +218,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
                         </Card>
                     </div>
                  </div>
+                )
              )}
         </div>
       </CardContent>

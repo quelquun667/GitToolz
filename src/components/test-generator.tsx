@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
+import FileIcon from './file-icon';
 
 const SUPPORTED_FRAMEWORKS = [
   'Jest',
@@ -280,7 +281,10 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
       <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isFetchingTree || fileTree.length === 0}>
-            {filePath || 'Select a file...'}
+            <div className="flex items-center gap-2">
+              {filePath ? <FileIcon filename={filePath} /> : <FileCode2 className="h-4 w-4" />}
+              <span className="truncate">{filePath || 'Select a file...'}</span>
+            </div>
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-2xl">
@@ -306,9 +310,10 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
                     setFilePath(file);
                     setIsFileDialogOpen(false);
                   }}
-                  className="p-2 rounded-md hover:bg-muted cursor-pointer text-sm font-mono"
+                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer text-sm font-mono"
                 >
-                  {file}
+                  <FileIcon filename={file} />
+                  <span>{file}</span>
                 </div>
               ))}
             </div>

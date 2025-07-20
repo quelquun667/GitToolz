@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ResponsiveTabs } from '@/components/responsive-tabs';
 import { GitCommitVertical, Users, Flame, MessageCircleWarning } from 'lucide-react';
 import CommitGraph from '@/components/commit-graph';
 import ContributorDashboard from './contributor-dashboard';
@@ -13,57 +13,48 @@ type AnalysisViewProps = {
   branches: string[];
 };
 
+const analysisTabs = [
+  {
+    value: "commit-graph",
+    label: "Commit Graph",
+    icon: GitCommitVertical
+  },
+  {
+    value: "contributors",
+    label: "Contributors",
+    icon: Users
+  },
+  {
+    value: "hotspots",
+    label: "Code Hotspots",
+    icon: Flame
+  },
+  {
+    value: "issues",
+    label: "Issue Analysis",
+    icon: MessageCircleWarning
+  }
+];
+
 export default function AnalysisView({ repoUrl, branches }: AnalysisViewProps) {
   return (
-    <Tabs defaultValue="commit-graph" className="w-full">
-      <div className="flex justify-center mb-4">
-        <TabsList className="grid w-full max-w-3xl grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="commit-graph">
-            <GitCommitVertical className="mr-2 h-4 w-4" />
-            Commit Graph
-          </TabsTrigger>
-           <TabsTrigger value="contributors">
-            <Users className="mr-2 h-4 w-4" />
-            Contributors
-          </TabsTrigger>
-           <TabsTrigger value="hotspots">
-            <Flame className="mr-2 h-4 w-4" />
-            Code Hotspots
-          </TabsTrigger>
-           <TabsTrigger value="issues">
-            <MessageCircleWarning className="mr-2 h-4 w-4" />
-            Issue Analysis
-          </TabsTrigger>
-        </TabsList>
-      </div>
-      <TabsContent value="commit-graph" className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-        <Card>
+    <ResponsiveTabs defaultValue="commit-graph" tabs={analysisTabs}>
+        <Card className="mt-4">
           <CardContent className="p-0">
-            <CommitGraph repoUrl={repoUrl} branches={branches} />
+            <ResponsiveTabs.Content value="commit-graph">
+              <CommitGraph repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="contributors">
+              <ContributorDashboard repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="hotspots">
+              <CodeHotspots repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="issues">
+              <IssueAnalyzer repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
           </CardContent>
         </Card>
-      </TabsContent>
-       <TabsContent value="contributors" className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-        <Card>
-          <CardContent className="p-0">
-            <ContributorDashboard repoUrl={repoUrl} branches={branches} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-       <TabsContent value="hotspots" className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-        <Card>
-          <CardContent className="p-0">
-            <CodeHotspots repoUrl={repoUrl} branches={branches} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-       <TabsContent value="issues" className="mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
-        <Card>
-          <CardContent className="p-0">
-            <IssueAnalyzer repoUrl={repoUrl} branches={branches} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+    </ResponsiveTabs>
   );
 }

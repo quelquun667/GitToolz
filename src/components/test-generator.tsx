@@ -23,7 +23,8 @@ import {
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { Separator } from './ui/separator';
-import FileIcon from './file-icon';
+import FileSelector from './file-selector';
+
 
 const SUPPORTED_FRAMEWORKS = [
   'Jest',
@@ -85,7 +86,6 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
   const [branch, setBranch] = useState('');
   const [fileTree, setFileTree] = useState<string[]>([]);
   const [isFetchingTree, setIsFetchingTree] = useState(false);
-  const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
   
   const [filePath, setFilePath] = useState('');
   const [functions, setFunctions] = useState<string[]>([]);
@@ -273,56 +273,6 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
     URL.revokeObjectURL(url);
   };
   
-  const FileSelectorDialog = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const filteredFiles = fileTree.filter(file => file.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return (
-      <Dialog open={isFileDialogOpen} onOpenChange={setIsFileDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={isFetchingTree || fileTree.length === 0}>
-            <div className="flex items-center gap-2">
-              {filePath ? <FileIcon filename={filePath} /> : <FileCode2 className="h-4 w-4" />}
-              <span className="truncate">{filePath || 'Select a file...'}</span>
-            </div>
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Select a Source File</DialogTitle>
-            <DialogDescription>Choose a file to generate tests for.</DialogDescription>
-          </DialogHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search files..." 
-              className="pl-10"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <ScrollArea className="h-96">
-            <div className="p-1">
-              {filteredFiles.map(file => (
-                <div 
-                  key={file} 
-                  onClick={() => {
-                    setFilePath(file);
-                    setIsFileDialogOpen(false);
-                  }}
-                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted cursor-pointer text-sm font-mono"
-                >
-                  <FileIcon filename={file} />
-                  <span>{file}</span>
-                </div>
-              ))}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-  
   const renderMainContent = () => {
     if (isGenerating) {
       return (
@@ -451,7 +401,14 @@ export default function TestGenerator({ repoUrl, branches }: TestGeneratorProps)
             <div className="space-y-2">
                <Label htmlFor="file" className="flex items-center gap-2"><FileCode2 className="h-4 w-4 text-primary" />File Path</Label>
                <div className="flex items-center gap-2">
-                 <FileSelectorDialog />
+                 <FileSelector
+                    fileTree={fileTree}
+                    selectedFile={filePath}
+                    onFileSelect={setFilePath}
+                    isFetchingTree={isFetchingTree}
+                    dialogTitle="Select a Source File"
+                    dialogDescription="Choose a file to generate tests for."
+                 />
                  {isFetchingTree && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
                </div>
             </div>

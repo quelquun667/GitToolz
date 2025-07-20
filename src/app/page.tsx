@@ -109,8 +109,8 @@ export default function Home() {
   const renderCategorySelection = () => (
       <div className="w-full max-w-4xl mx-auto space-y-8">
         <div className="text-center">
-            <h2 className="text-2xl font-bold">Que souhaitez-vous faire ?</h2>
-            <p className="text-muted-foreground">Choisissez une catégorie pour commencer.</p>
+            <h2 className="text-2xl font-bold">What would you like to do?</h2>
+            <p className="text-muted-foreground">Choose a category to get started.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
@@ -121,13 +121,13 @@ export default function Home() {
                         </div>
                         <div>
                             <CardTitle>Assistants</CardTitle>
-                            <CardDescription>Outils IA pour générer du contenu et vous aider dans vos tâches.</CardDescription>
+                            <CardDescription>AI tools to generate content and help with your tasks.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <Button className="w-full" onClick={() => setCurrentView('assistants')}>
-                        Accéder aux assistants
+                        Go to Assistants
                     </Button>
                 </CardContent>
             </Card>
@@ -138,14 +138,14 @@ export default function Home() {
                             <LineChart className="h-6 w-6" />
                         </div>
                          <div>
-                            <CardTitle>Analyse & Visualisation</CardTitle>
-                            <CardDescription>Explorez votre dépôt avec des graphes et des statistiques.</CardDescription>
+                            <CardTitle>Analysis & Visualization</CardTitle>
+                            <CardDescription>Explore your repository with graphs and stats.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent>
                     <Button className="w-full" onClick={() => setCurrentView('analysis')}>
-                        Explorer
+                        Explore
                     </Button>
                 </CardContent>
             </Card>
@@ -160,7 +160,7 @@ export default function Home() {
                 <div className="w-full max-w-7xl mx-auto">
                     <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Retour aux catégories
+                        Back to categories
                     </Button>
                     <AnalysisView repoUrl={validatedRepoUrl!} branches={branches} />
                 </div>
@@ -170,7 +170,7 @@ export default function Home() {
                 <div className="w-full max-w-7xl mx-auto">
                     <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Retour aux catégories
+                        Back to categories
                     </Button>
                     <AssistantView repoUrl={validatedRepoUrl!} branches={branches} />
                 </div>

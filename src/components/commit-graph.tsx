@@ -30,6 +30,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   const [branch, setBranch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasGraph, setHasGraph] = useState(false);
 
   useEffect(() => {
     if (branches.length > 0) {
@@ -46,6 +47,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     
     setIsLoading(true);
     setError(null);
+    setHasGraph(false);
 
     try {
       const response = await fetch('/api/fetch-commit-graph', {
@@ -59,6 +61,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       }
       
       drawGraph(result.commits);
+      setHasGraph(true);
 
     } catch (e: any) {
       setError(e.message);
@@ -70,6 +73,11 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
 
   const drawGraph = (commits: CommitNode[]) => {
     if (!visJsRef.current) return;
+
+    // Clear previous graph
+    if (visJsRef.current.firstChild) {
+      visJsRef.current.removeChild(visJsRef.current.firstChild);
+    }
 
     const nodes: Node[] = commits.map((commit, index) => ({
       id: commit.sha,
@@ -184,7 +192,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
               </Alert>
             </div>
           )}
-          {!isLoading && !error && !visJsRef.current?.childNodes.length && (
+          {!isLoading && !error && !hasGraph && (
             <div className="text-center">
               <GitCommitVertical className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">Awaiting Graph Generation</h3>

@@ -33,6 +33,7 @@ type Commit = {
   sha: string;
   message: string;
   author: string | null;
+  date: string;
 };
 
 type ChangelogGeneratorProps = {

@@ -128,7 +128,7 @@ export async function getRepoFileContent(repoUrl: string, branch: string, path: 
     }
 }
 
-export async function getRepoCommitsByDate(repoUrl: string, branch: string, startDate: string, endDate: string): Promise<{sha: string, message: string, author: string | null}[]> {
+export async function getRepoCommitsByDate(repoUrl: string, branch: string, startDate: string, endDate: string): Promise<{sha: string, message: string, author: string | null, date: string}[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
         const { data } = await octokit.rest.repos.listCommits({
@@ -145,6 +145,7 @@ export async function getRepoCommitsByDate(repoUrl: string, branch: string, star
                 sha: commit.sha,
                 message: commit.commit.message,
                 author: commit.author?.login ?? 'Unknown',
+                date: commit.commit.author?.date ?? new Date().toISOString(),
             }));
         }
 

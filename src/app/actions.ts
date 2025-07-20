@@ -141,7 +141,7 @@ export async function summarizeAction(documentation: string): Promise<{summary: 
 
 export async function fetchCommitsAction(
   input: z.infer<typeof fetchCommitsSchema>
-): Promise<{ commits?: { sha: string; message: string; author: string | null }[]; error?: string }> {
+): Promise<{ commits?: { sha: string; message: string; author: string | null, date: string }[]; error?: string }> {
     const validatedFields = fetchCommitsSchema.safeParse(input);
     if (!validatedFields.success) {
       return { error: "Invalid input." };

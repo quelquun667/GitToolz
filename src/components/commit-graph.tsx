@@ -23,9 +23,10 @@ type Commit = {
   sha: string;
   message: string;
   author: string | null;
+  date: string;
 };
 
-type CommitNode = Commit & {
+type CommitNode = Omit<Commit, 'date'> & {
   parents: string[];
 };
 
@@ -95,7 +96,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       const result = await response.json();
       if (result.error || !response.ok) throw new Error(result.error || 'Failed to fetch commits.');
       
-      setFetchedCommits(result.commits);
+      const sortedCommits = result.commits.sort((a: Commit, b: Commit) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setFetchedCommits(sortedCommits);
+
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Erreur', description: e.message });
     } finally {
@@ -259,7 +262,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   }, []);
   
   useEffect(() => {
-    if (graphData) {
+    if (graphData && visJsRef.current) {
       drawGraph(visJsRef.current, networkInstanceRef, graphData);
     }
   }, [graphData, drawGraph]);
@@ -268,7 +271,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     if (isGraphModalOpen && graphData) {
       // Delay drawing in modal to allow it to render
       setTimeout(() => {
-        drawGraph(visJsModalRef.current, modalNetworkInstanceRef, graphData, true);
+        if (visJsModalRef.current) {
+          drawGraph(visJsModalRef.current, modalNetworkInstanceRef, graphData, true);
+        }
       }, 100);
     }
   }, [isGraphModalOpen, graphData, drawGraph]);
@@ -409,7 +414,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       </aside>
 
       <main className="flex-1 flex flex-col p-4 md:pl-0">
-        <div className="flex-1 flex flex-col justify-center rounded-lg border-2 border-dashed border-border/60 relative overflow-hidden">
+        <div className="flex-1 flex flex-col justify-stretch rounded-lg border-2 border-dashed border-border/60 relative overflow-hidden">
           {error && (
             <div className="absolute inset-0 flex items-center justify-center z-10 bg-background/80">
               <Alert variant="destructive" className="max-w-md border-none">
@@ -420,7 +425,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
             </div>
           )}
           {!isLoading && !error && !graphData && (
-            <div className="text-center">
+            <div className="text-center m-auto">
               <GitCommitVertical className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-medium">Awaiting Graph Generation</h3>
               <p className="mt-1 text-sm text-muted-foreground">Select your options and click "Generate Graph".</p>

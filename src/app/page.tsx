@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,16 @@ export default function Home() {
         setCurrentView('url-input');
     }
   }, [validatedRepoUrl]);
+  
+  const handleReset = () => {
+    setValidatedRepoUrl(null);
+    setRepoUrl('');
+    setBranches([]);
+    setRepoUrlError(null);
+    setIsUrlValidating(false);
+    setIsFetchingBranches(false);
+    setCurrentView('url-input');
+  }
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRepoUrl(e.target.value);
@@ -266,11 +276,22 @@ export default function Home() {
   
   return (
     <div className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center">
-      <header className="flex items-center justify-center gap-3 mb-8 text-center">
+      <header className="flex items-center justify-center gap-3 mb-8 text-center relative w-full max-w-7xl">
         <GitBranch className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">GitToolz</h1>
+        {validatedRepoUrl && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleReset} 
+            className="absolute right-0 top-1/2 -translate-y-1/2"
+            aria-label="Start over"
+          >
+            <RotateCcw className="h-5 w-5 text-muted-foreground" />
+          </Button>
+        )}
       </header>
-      <div className="w-full flex-grow flex items-center justify-center">
+      <div className="w-full flex-grow flex justify-center">
         {renderContent()}
       </div>
     </div>

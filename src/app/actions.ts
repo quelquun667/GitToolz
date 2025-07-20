@@ -108,6 +108,13 @@ const commentGeneratorSchema = z.object({
   commentStyle: z.string().min(1),
 });
 
+const feedbackSchema = z.object({
+  type: z.enum(['Feedback', 'Bug Report']),
+  message: z.string().min(10, { message: 'Message must be at least 10 characters long.' }),
+  name: z.string().optional(),
+  email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
+});
+
 
 export async function getRepoTree(
   input: z.infer<typeof fetchTreeSchema>
@@ -506,4 +513,67 @@ export async function getBranchActivityAction(input: z.infer<typeof analysisSche
         const error = e instanceof Error ? e.message : 'An unknown error occurred.';
         return { error };
     }
+}
+
+
+export async function sendFeedbackAction(
+  input: z.infer<typeof feedbackSchema>
+): Promise<{ success: boolean; error?: string }> {
+  const validatedFields = feedbackSchema.safeParse(input);
+
+  if (!validatedFields.success) {
+    return { success: false, error: 'Invalid input.' };
+  }
+
+  const { type, message, name, email } = validatedFields.data;
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    console.error('DISCORD_WEBHOOK_URL is not set.');
+    return { success: false, error: 'Feedback service is not configured.' };
+  }
+
+  const embed = {
+    title: `New ${type} Submission`,
+    color: type === 'Bug Report' ? 15548997 : 3447003, // Red for bug, blue for feedback
+    fields: [
+      {
+        name: 'Message',
+        value: message,
+      },
+    ],
+    footer: {
+      text: `Submitted at ${new Date().toUTCString()}`,
+    },
+  };
+  
+  if (name) {
+    embed.fields.push({ name: 'From', value: name });
+  }
+  if (email) {
+     embed.fields.push({ name: 'Email', value: email });
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: 'GitToolz Feedback Bot',
+        embeds: [embed],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send to Discord:', response.status, await response.text());
+      throw new Error('Could not submit feedback.');
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending feedback:', error);
+    return { success: false, error: 'Failed to send feedback.' };
+  }
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import AssistantView from '@/components/assistant-view';
+import AnalysisView from '@/components/analysis-view';
 
-type View = 'url-input' | 'category-selection' | 'assistants';
+type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
 
 export default function Home() {
   const { toast } = useToast();
@@ -131,10 +131,10 @@ export default function Home() {
                     </Button>
                 </CardContent>
             </Card>
-             <Card className="border-dashed border-border/60 text-muted-foreground transition-all duration-300">
+             <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
                 <CardHeader>
-                    <div className="flex items-center gap-4 opacity-50">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-muted/50 text-muted-foreground">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
                             <LineChart className="h-6 w-6" />
                         </div>
                          <div>
@@ -144,8 +144,8 @@ export default function Home() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Button className="w-full" disabled>
-                        Bientôt disponible
+                    <Button className="w-full" onClick={() => setCurrentView('analysis')}>
+                        Explorer
                     </Button>
                 </CardContent>
             </Card>
@@ -155,6 +155,16 @@ export default function Home() {
 
   const renderContent = () => {
     switch (currentView) {
+        case 'analysis':
+             return (
+                <div className="w-full max-w-7xl mx-auto">
+                    <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Retour aux catégories
+                    </Button>
+                    <AnalysisView repoUrl={validatedRepoUrl!} branches={branches} />
+                </div>
+            );
         case 'assistants':
             return (
                 <div className="w-full max-w-7xl mx-auto">
@@ -257,7 +267,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center">
       <header className="flex items-center justify-center gap-3 mb-8 text-center">
-        <FileCode2 className="h-8 w-8 text-primary" />
+        <GitBranch className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">GitToolz</h1>
       </header>
       <div className="w-full flex-grow flex items-center justify-center">

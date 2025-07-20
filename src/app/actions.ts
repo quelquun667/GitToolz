@@ -7,6 +7,9 @@ import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/gener
 import { extractFunctions } from '@/ai/flows/extract-functions-flow';
 import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
 import { analyzeIssues, type AnalyzeIssuesInput, type AnalyzeIssuesOutput } from '@/ai/flows/analyze-issues-flow';
+import { translateCode, type TranslateCodeInput } from '@/ai/flows/translate-code-flow';
+import { generateComments, type GenerateCommentsInput } from '@/ai/flows/generate-comments-flow';
+
 import { 
   getRepoBranches, 
   getRepoCommitsByDate, 
@@ -17,7 +20,8 @@ import {
   getCommitHistory,
   getRepoContributors,
   streamRepoFileCommits,
-  getRepoIssues
+  getRepoIssues,
+  getRepoBranchesWithDetails
 } from '@/services/github';
 import { z } from 'zod';
 
@@ -90,6 +94,18 @@ const commitHelperSchema = z.object({
 const analysisSchema = z.object({
   repoUrl: z.string().url(),
   branch: z.string(),
+});
+
+const codeTranslatorSchema = z.object({
+  sourceCode: z.string().min(1),
+  sourceLanguage: z.string().min(1),
+  targetLanguage: z.string().min(1),
+});
+
+const commentGeneratorSchema = z.object({
+  sourceCode: z.string().min(1),
+  language: z.string().min(1),
+  commentStyle: z.string().min(1),
 });
 
 
@@ -354,6 +370,65 @@ export async function fetchCommitGraphAction(
     }
 }
 
+export async function streamCodeTranslatorAction(
+  input: TranslateCodeInput
+): Promise<ReadableStream> {
+  const validatedFields = codeTranslatorSchema.safeParse(input);
+  if (!validatedFields.success) {
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(JSON.stringify({ error: "Invalid input." }));
+        controller.close();
+      }
+    });
+    return errorStream;
+  }
+
+  const translationStream = translateCode(validatedFields.data);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of translationStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+
+  return stream;
+}
+
+export async function streamCommentGeneratorAction(
+  input: GenerateCommentsInput
+): Promise<ReadableStream> {
+  const validatedFields = commentGeneratorSchema.safeParse(input);
+  if (!validatedFields.success) {
+    const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(JSON.stringify({ error: "Invalid input." }));
+        controller.close();
+      }
+    });
+    return errorStream;
+  }
+
+  const commentStream = generateComments(validatedFields.data);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of commentStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+
+  return stream;
+}
+
+
 // Analysis Actions
 export async function getContributorStatsAction(input: z.infer<typeof analysisSchema>) {
     const validatedFields = analysisSchema.safeParse(input);
@@ -415,6 +490,18 @@ export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>)
         const analysis = await analyzeIssues(aiInput);
         return analysis;
 
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
+        return { error };
+    }
+}
+
+export async function getBranchActivityAction(input: z.infer<typeof analysisSchema>) {
+    const validatedFields = analysisSchema.safeParse(input);
+    if (!validatedFields.success) return { error: 'Invalid input.' };
+    try {
+        const branches = await getRepoBranchesWithDetails(validatedFields.data.repoUrl, validatedFields.data.branch);
+        return { branches };
     } catch (e) {
         const error = e instanceof Error ? e.message : 'An unknown error occurred.';
         return { error };

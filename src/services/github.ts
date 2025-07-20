@@ -353,3 +353,45 @@ export async function getRepoIssues(repoUrl: string): Promise<any[]> {
         throw new Error('Failed to fetch issues from GitHub. The repository may have issues disabled.');
     }
 }
+
+export async function getRepoBranchesWithDetails(repoUrl: string, defaultBranch: string): Promise<any[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const branches = await octokit.paginate(octokit.rest.repos.listBranches, {
+            owner,
+            repo,
+        });
+        
+        const branchDetails = await Promise.all(branches.map(async (branch) => {
+            const { data: commit } = await octokit.rest.repos.getCommit({
+                owner,
+                repo,
+                ref: branch.commit.sha,
+            });
+
+            const { data: compare } = await octokit.rest.repos.compareCommits({
+                owner,
+                repo,
+                base: defaultBranch,
+                head: branch.name,
+            });
+
+            return {
+                name: branch.name,
+                lastCommit: {
+                    date: commit.commit.author?.date,
+                    author: commit.author?.login,
+                },
+                aheadBy: compare.ahead_by,
+                behindBy: compare.behind_by,
+                isProtected: branch.protected,
+            };
+        }));
+        
+        return branchDetails;
+
+    } catch (e: any) {
+        console.error('GitHub API Error fetching branch details:', e);
+        throw new Error('Failed to fetch branch details from GitHub.');
+    }
+}

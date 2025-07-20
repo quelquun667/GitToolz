@@ -48,8 +48,8 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
     if (!repoUrl || !branch || !startDate || !endDate) {
       toast({
         variant: 'destructive',
-        title: 'Information manquante',
-        description: 'Veuillez sélectionner une branche et une plage de dates.',
+        title: 'Missing Information',
+        description: 'Please select a branch and a date range.',
       });
       return;
     }
@@ -70,10 +70,10 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
       
       setAllCommits(result.commits);
     } catch (e) {
-      const error = e instanceof Error ? e.message : 'Une erreur inconnue est survenue.';
+      const error = e instanceof Error ? e.message : 'An unknown error occurred.';
       toast({
         variant: 'destructive',
-        title: 'Erreur lors de la récupération des commits',
+        title: 'Failed to Fetch Commits',
         description: error,
       });
     } finally {
@@ -91,32 +91,32 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
   return (
     <div className="space-y-4 p-2 border rounded-md bg-muted/20">
       <div className="space-y-2">
-        <Label className="flex items-center gap-2 text-xs"><GitBranch className="h-3 w-3 text-primary" />Branche</Label>
+        <Label className="flex items-center gap-2 text-xs"><GitBranch className="h-3 w-3 text-primary" />Branch</Label>
         <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
-          <SelectTrigger className="h-8"><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
+          <SelectTrigger className="h-8"><SelectValue placeholder="Select a branch" /></SelectTrigger>
           <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
         </Select>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-2">
-          <Label className="text-xs">Date de début</Label>
+          <Label className="text-xs">Start Date</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal bg-background", !startDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, "MMM d") : <span>Date</span>}
+                {startDate ? format(startDate, "MMM d") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
           </Popover>
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">Date de fin</Label>
+          <Label className="text-xs">End Date</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal bg-background", !endDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, "MMM d") : <span>Date</span>}
+                {endDate ? format(endDate, "MMM d") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
@@ -124,12 +124,12 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
         </div>
       </div>
       <Button onClick={handleFetchCommits} size="sm" className="w-full h-8" disabled={isFetchDisabled}>
-        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Récupération...</> : <><Search className="mr-2 h-4 w-4" />Récupérer Commits</>}
+        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
       </Button>
 
       {allCommits.length > 0 && (
         <div className="space-y-2 pt-2">
-          <Label className="text-xs text-muted-foreground">Sélectionner un Commit</Label>
+          <Label className="text-xs text-muted-foreground">Select a Commit</Label>
           <ScrollArea className="h-40 rounded-md border bg-background">
             <RadioGroup value={selectedSha} onValueChange={handleSelectCommit} className="p-2">
               {allCommits.map(commit => (

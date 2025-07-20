@@ -59,11 +59,11 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
   
   const handleGenerate = async () => {
     if (compareMode === 'branches' && (!baseBranch || !compareBranch)) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez sélectionner les deux branches à comparer.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select both branches to compare.' });
         return;
     }
     if (compareMode === 'commit' && !selectedCommit) {
-        toast({ variant: 'destructive', title: 'Erreur', description: 'Veuillez sélectionner un commit.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select a commit.' });
         return;
     }
 
@@ -89,7 +89,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         const result = await response.json();
         
         if (!response.ok || result.error) {
-            throw new Error(result.error || "Une erreur est survenue lors de la génération.");
+            throw new Error(result.error || "An error occurred during generation.");
         }
         
         setSuggestions(result.suggestions || []);
@@ -101,9 +101,9 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         setTimeout(() => setIsFinalizing(false), 1500);
 
     } catch (e) {
-      const error = e instanceof Error ? e.message : 'Une erreur inconnue est survenue.';
+      const error = e instanceof Error ? e.message : 'An unknown error occurred.';
       setGenerationError(error);
-      toast({ variant: 'destructive', title: 'Échec de la génération', description: error });
+      toast({ variant: 'destructive', title: 'Generation Failed', description: error });
       setIsGenerating(false);
     }
   };
@@ -111,7 +111,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
         setCopiedIndex(id);
-        toast({ title: 'Copié !', description: 'La commande a été copiée dans le presse-papiers.' });
+        toast({ title: 'Copied!', description: 'The command has been copied to your clipboard.' });
         setTimeout(() => setCopiedIndex(null), 2000);
     });
   };
@@ -124,8 +124,8 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
           <div className="text-center p-4 max-w-md mx-auto">
             <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-            <h3 className="mt-4 text-lg font-medium">Analyse des changements...</h3>
-            <p className="mt-1 text-sm text-muted-foreground">L'IA compare les références et prépare les suggestions.</p>
+            <h3 className="mt-4 text-lg font-medium">Analyzing changes...</h3>
+            <p className="mt-1 text-sm text-muted-foreground">The AI is comparing the references and preparing suggestions.</p>
           </div>
         </div>
       );
@@ -135,7 +135,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
           <div className="text-center p-4">
             <CheckCircle2 className="mx-auto h-12 w-12 text-green-500" />
-            <h3 className="mt-4 text-lg font-medium">Suggestions Prêtes !</h3>
+            <h3 className="mt-4 text-lg font-medium">Suggestions Ready!</h3>
           </div>
         </div>
       );
@@ -146,7 +146,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
              <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-destructive/50 bg-destructive/5">
                 <Alert variant="destructive" className="max-w-lg border-none">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erreur de Génération</AlertTitle>
+                  <AlertTitle>Generation Error</AlertTitle>
                   <AlertDescription>{generationError}</AlertDescription>
                 </Alert>
             </div>
@@ -160,12 +160,12 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
                 <CardHeader>
                     <div className="flex justify-between items-start">
                         <div>
-                            <CardTitle>Suggestions de Commit</CardTitle>
+                            <CardTitle>Commit Suggestions</CardTitle>
                             <CardDescription>{summary}</CardDescription>
                         </div>
                         <Button variant="ghost" size="icon" onClick={handleGenerate} disabled={isGenerating}>
                             <RefreshCw className={cn("h-4 w-4", isGenerating && "animate-spin")} />
-                            <span className="sr-only">Régénérer</span>
+                            <span className="sr-only">Regenerate</span>
                         </Button>
                     </div>
                 </CardHeader>
@@ -187,7 +187,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
                                             <Input readOnly value={normalCommand} className="h-9 bg-background/50 text-xs font-mono" />
                                             <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={() => handleCopy(normalCommand, `normal-${index}`)}>
                                                 {copiedIndex === `normal-${index}` ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                                                Copier
+                                                Copy
                                             </Button>
                                         </div>
                                         {compareMode === 'commit' && (
@@ -195,7 +195,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
                                                 <Input readOnly value={amendCommand} className="h-9 bg-background/50 text-xs font-mono" />
                                                 <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={() => handleCopy(amendCommand, `amend-${index}`)}>
                                                     {copiedIndex === `amend-${index}` ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                                                    Copier
+                                                    Copy
                                                 </Button>
                                             </div>
                                         )}
@@ -208,8 +208,8 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
             </Card>
             <Card className="flex flex-col shadow-lg overflow-hidden">
                 <CardHeader>
-                    <CardTitle>Diff Analysé</CardTitle>
-                    <CardDescription>Aperçu des changements qui ont servi à la génération.</CardDescription>
+                    <CardTitle>Analyzed Diff</CardTitle>
+                    <CardDescription>A preview of the changes used for generation.</CardDescription>
                 </CardHeader>
                  <div className="flex-1 overflow-auto border-t">
                     <div className="prose prose-invert max-w-none break-words h-full">
@@ -257,9 +257,9 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
             <div className="text-center">
             <Clipboard className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium">Assistant de Commit</h3>
+            <h3 className="mt-4 text-lg font-medium">Commit Assistant</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-                Configurez la comparaison pour obtenir des suggestions.
+                Set up your comparison to get suggestions.
             </p>
             </div>
       </div>
@@ -271,17 +271,17 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
       <aside className="w-full md:w-[450px] flex-shrink-0 border-b md:border-r border-border p-4 flex flex-col gap-6 overflow-y-auto">
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>1. Choisir le Mode de Comparaison</CardTitle>
+            <CardTitle>1. Choose Comparison Mode</CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup value={compareMode} onValueChange={(v) => setCompareMode(v as 'branches' | 'commit')} className="flex gap-4">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="branches" id="mode-branches"/>
-                <Label htmlFor="mode-branches" className="font-normal flex items-center gap-2"><GitCompareArrows className="h-4 w-4"/> Entre deux branches</Label>
+                <Label htmlFor="mode-branches" className="font-normal flex items-center gap-2"><GitCompareArrows className="h-4 w-4"/> Between two branches</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="commit" id="mode-commit"/>
-                <Label htmlFor="mode-commit" className="font-normal flex items-center gap-2"><GitCommitHorizontal className="h-4 w-4"/> Commit unique</Label>
+                <Label htmlFor="mode-commit" className="font-normal flex items-center gap-2"><GitCommitHorizontal className="h-4 w-4"/> Single commit</Label>
               </div>
             </RadioGroup>
           </CardContent>
@@ -291,22 +291,22 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
             {compareMode === 'branches' && (
                 <Card className="shadow-lg">
                 <CardHeader>
-                    <CardTitle>2. Sélectionner les Branches</CardTitle>
-                    <CardDescription>L'IA analysera les différences entre ces deux branches.</CardDescription>
+                    <CardTitle>2. Select Branches</CardTitle>
+                    <CardDescription>The AI will analyze the differences between these two branches.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                    <Label htmlFor="baseBranch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Branche de Base</Label>
+                    <Label htmlFor="baseBranch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Base Branch</Label>
                     <Select onValueChange={setBaseBranch} value={baseBranch} disabled={branches.length === 0}>
-                        <SelectTrigger><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
-                        <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        <SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger>
+                        <SelectContent>{branches.map(b => <SelectItem key={`base-${b}`} value={b}>{b}</SelectItem>)}</SelectContent>
                     </Select>
                     </div>
                      <div className="space-y-2">
-                    <Label htmlFor="compareBranch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Comparer avec la Branche</Label>
+                    <Label htmlFor="compareBranch" className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-primary" />Compare Branch</Label>
                     <Select onValueChange={setCompareBranch} value={compareBranch} disabled={branches.length === 0}>
-                        <SelectTrigger><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
-                        <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                        <SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger>
+                        <SelectContent>{branches.map(b => <SelectItem key={`compare-${b}`} value={b}>{b}</SelectItem>)}</SelectContent>
                     </Select>
                     </div>
                 </CardContent>
@@ -318,8 +318,8 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
             {compareMode === 'commit' && (
                 <Card className="shadow-lg">
                 <CardHeader>
-                    <CardTitle>2. Sélectionner un Commit</CardTitle>
-                    <CardDescription>L'IA analysera les changements introduits par ce commit par rapport à son parent.</CardDescription>
+                    <CardTitle>2. Select a Commit</CardTitle>
+                    <CardDescription>The AI will analyze the changes introduced by this commit against its parent.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <CommitSelector 
@@ -334,7 +334,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
 
         {suggestions.length === 0 && (
           <Button onClick={handleGenerate} className="w-full" disabled={isGenerateDisabled}>
-            {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyse en cours...</> : <><Sparkles className="mr-2 h-4 w-4" />Générer les Suggestions</>}
+            {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Analyzing...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Suggestions</>}
           </Button>
         )}
       </aside>

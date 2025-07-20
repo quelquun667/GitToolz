@@ -79,7 +79,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
 
   const handleFetchRangeCommits = async () => {
     if (!rangeBranch || !startDate || !endDate) {
-      toast({ variant: 'destructive', title: 'Information manquante', description: 'Veuillez sélectionner une branche et une plage de dates.' });
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a branch and a date range.' });
       return;
     }
     setIsFetchingCommits(true);
@@ -100,7 +100,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       setFetchedCommits(sortedCommits);
 
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Erreur', description: e.message });
+      toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
       setIsFetchingCommits(false);
     }
@@ -327,20 +327,20 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                 </CardHeader>
                 <CardContent className="space-y-4">
                      <div className="space-y-2">
-                        <Label>Branche</Label>
+                        <Label>Branch</Label>
                         <Select onValueChange={setRangeBranch} value={rangeBranch} disabled={branches.length === 0}>
-                          <SelectTrigger><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger>
                           <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                         </Select>
                      </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                        <Label>Date de début</Label>
+                        <Label>Start Date</Label>
                         <Popover>
                             <PopoverTrigger asChild>
                               <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {startDate ? format(startDate, "PPP") : <span>Date</span>}
+                                {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -355,12 +355,12 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                         </Popover>
                         </div>
                         <div className="space-y-2">
-                        <Label>Date de fin</Label>
+                        <Label>End Date</Label>
                         <Popover>
                             <PopoverTrigger asChild>
                               <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")} disabled={!startDate}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                {endDate ? format(endDate, "PPP") : <span>Date</span>}
+                                {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0">
@@ -376,7 +376,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                         </div>
                     </div>
                     <Button onClick={handleFetchRangeCommits} className="w-full" disabled={isFetchingCommits}>
-                        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Récupération...</> : <><Search className="mr-2 h-4 w-4" />Récupérer Commits</>}
+                        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
                     </Button>
                     {fetchedCommits.length > 0 && (
                         <div className="space-y-4">

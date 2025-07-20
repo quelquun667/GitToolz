@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -23,9 +23,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Switch } from '@/components/ui/switch';
 
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
+
+const THEME_COLORS = [
+    { name: 'Violet', value: '300 100% 29.8%' },
+    { name: 'Blue', value: '221.2 83.2% 53.3%' },
+    { name: 'Green', value: '142.1 76.2% 36.3%' },
+    { name: 'Orange', value: '24.6 95% 53.1%' },
+    { name: 'Red', value: '0 84.2% 60.2%' },
+];
 
 export default function Home() {
   const { toast } = useToast();
@@ -38,6 +55,31 @@ export default function Home() {
   const [isFetchingBranches, setIsFetchingBranches] = useState(false);
   
   const [currentView, setCurrentView] = useState<View>('url-input');
+  
+  // Theme state
+  const [theme, setTheme] = useState('dark');
+  const [accentColor, setAccentColor] = useState(THEME_COLORS[0].value);
+
+  useEffect(() => {
+    // Set initial theme from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    setTheme(savedTheme);
+
+    // Set initial accent color from localStorage
+    const savedColor = localStorage.getItem('accentColor') || THEME_COLORS[0].value;
+    setAccentColor(savedColor);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--primary', accentColor);
+    document.documentElement.style.setProperty('--ring', accentColor);
+    localStorage.setItem('accentColor', accentColor);
+  }, [accentColor]);
 
   useEffect(() => {
     if (validatedRepoUrl) {
@@ -293,44 +335,103 @@ export default function Home() {
   
   return (
     <main className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center justify-center">
-      <header className="flex items-center justify-center gap-3 mb-8 text-center relative w-full max-w-7xl">
-        <GitBranch className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">GitToolz</h1>
-        {validatedRepoUrl && (
-          <AlertDialog>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute right-0 top-1/2 -translate-y-1/2"
-                        aria-label="Start over"
-                      >
-                        <RotateCcw className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                  </AlertDialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                    <p>Start over with a new repository</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will clear your current repository and return you to the home screen. Any unsaved work will be lost.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
+      <header className="w-full max-w-7xl mx-auto">
+        <div className="flex items-center justify-center relative mb-8 text-center">
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 flex gap-2">
+                <Dialog>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon"><Settings className="h-5 w-5"/></Button>
+                                </DialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Theme Settings</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle>Theme Settings</DialogTitle>
+                            <DialogDescription>Customize the look and feel of the application.</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <Label>Theme</Label>
+                                <div className="flex items-center gap-2">
+                                    <Sun className="h-5 w-5"/>
+                                    <Switch checked={theme === 'dark'} onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')} />
+                                    <Moon className="h-5 w-5"/>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Accent Color</Label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {THEME_COLORS.map(color => (
+                                        <TooltipProvider key={color.name}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        onClick={() => setAccentColor(color.value)}
+                                                        className="h-8 w-8 rounded-full border-2"
+                                                        style={{ 
+                                                            backgroundColor: `hsl(${color.value})`,
+                                                            borderColor: accentColor === color.value ? 'hsl(var(--foreground))' : 'transparent'
+                                                        }}
+                                                    />
+                                                </TooltipTrigger>
+                                                <TooltipContent><p>{color.name}</p></TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+            
+            <div className="flex items-center gap-3">
+                <GitBranch className="h-8 w-8 text-primary" />
+                <h1 className="text-3xl font-bold">GitToolz</h1>
+            </div>
+
+            {validatedRepoUrl && (
+              <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                <AlertDialog>
+                    <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                aria-label="Start over"
+                            >
+                                <RotateCcw className="h-5 w-5 text-muted-foreground" />
+                            </Button>
+                        </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Start over with a new repository</p>
+                        </TooltipContent>
+                    </Tooltip>
+                    </TooltipProvider>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will clear your current repository and return you to the home screen. Any unsaved work will be lost.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleReset}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+        </div>
       </header>
       <div className="w-full flex-grow flex justify-center items-center">
         {renderContent()}

@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import AssistantView from '@/components/assistant-view';
 import AnalysisView from '@/components/analysis-view';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
 
@@ -279,7 +281,7 @@ export default function Home() {
   };
   
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center">
+    <main className="min-h-screen bg-background text-foreground p-4 flex flex-col items-center justify-center">
       <header className="flex items-center justify-center gap-3 mb-8 text-center relative w-full max-w-7xl">
         <GitBranch className="h-8 w-8 text-primary" />
         <h1 className="text-3xl font-bold">GitToolz</h1>
@@ -307,6 +309,8 @@ export default function Home() {
       <div className="w-full flex-grow flex justify-center items-center">
         {renderContent()}
       </div>
-    </div>
+    </main>
   );
 }
+
+    

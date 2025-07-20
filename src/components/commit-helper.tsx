@@ -8,13 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, GitBranch, CheckCircle2, Clipboard, GitCompareArrows, GitCommitHorizontal, AlertCircle, Copy, Check } from 'lucide-react';
+import { Loader2, Sparkles, GitBranch, CheckCircle2, Clipboard, GitCompareArrows, GitCommitHorizontal, AlertCircle, Copy, Check, RefreshCw } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { cn } from '@/lib/utils';
-import ChangelogGenerator from './changelog-generator';
 import CommitSelector from './commit-selector';
 
 type CommitHelperProps = {
@@ -47,7 +46,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
 
   useEffect(() => {
     if (branches.length > 0) {
@@ -82,7 +81,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
               repoUrl,
               compareMode,
               base: compareMode === 'branches' ? baseBranch : selectedCommit,
-              compare: compareMode === 'branches' ? compareBranch : '',
+              compare: compareMode === 'branches' ? compareBranch : undefined,
             }),
         });
 
@@ -108,10 +107,10 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
     }
   };
 
-  const handleCopy = (text: string, index: number) => {
+  const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
-        setCopiedIndex(index);
-        toast({ title: 'Copié !', description: 'Le message de commit a été copié.' });
+        setCopiedIndex(id);
+        toast({ title: 'Copié !', description: 'La commande a été copiée.' });
         setTimeout(() => setCopiedIndex(null), 2000);
     });
   };
@@ -158,20 +157,49 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
             <Card className="flex flex-col shadow-lg overflow-hidden">
                 <CardHeader>
-                    <CardTitle>Suggestions de Commit</CardTitle>
-                    <CardDescription>{summary}</CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle>Suggestions de Commit</CardTitle>
+                            <CardDescription>{summary}</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={handleGenerate} disabled={isGenerating}>
+                            <RefreshCw className={cn("h-4 w-4", isGenerating && "animate-spin")} />
+                            <span className="sr-only">Régénérer</span>
+                        </Button>
+                    </div>
                 </CardHeader>
                 <ScrollArea className="flex-1 border-t">
-                    <div className="p-6 space-y-3">
-                        {suggestions.map((suggestion, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                                <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">{suggestion.type}</span>
-                                <p className="flex-1 text-sm">{suggestion.message}</p>
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCopy(`${suggestion.type}: ${suggestion.message}`, index)}>
-                                    {copiedIndex === index ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                </Button>
-                            </div>
-                        ))}
+                    <div className="p-6 space-y-4">
+                        {suggestions.map((suggestion, index) => {
+                            const commitMessage = `${suggestion.type}: ${suggestion.message}`;
+                            const normalCommand = `git commit -m "${commitMessage}"`;
+                            const amendCommand = `git commit --amend -m "${commitMessage}"`;
+
+                            return (
+                                <div key={index} className="p-3 rounded-lg bg-muted/50 space-y-2">
+                                    <div className="flex items-start gap-3">
+                                        <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-1 rounded-full mt-0.5">{suggestion.type}</span>
+                                        <p className="flex-1 text-sm">{suggestion.message}</p>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-2 pl-3">
+                                        <div className="flex-1 flex items-center gap-2 text-xs p-2 rounded bg-background/50">
+                                            <code className="truncate">{normalCommand}</code>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleCopy(normalCommand, `normal-${index}`)}>
+                                                {copiedIndex === `normal-${index}` ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                            </Button>
+                                        </div>
+                                        {compareMode === 'commit' && (
+                                            <div className="flex-1 flex items-center gap-2 text-xs p-2 rounded bg-background/50">
+                                                <code className="truncate">{amendCommand}</code>
+                                                <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleCopy(amendCommand, `amend-${index}`)}>
+                                                    {copiedIndex === `amend-${index}` ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </ScrollArea>
             </Card>
@@ -312,3 +340,5 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
     </div>
   );
 }
+
+    

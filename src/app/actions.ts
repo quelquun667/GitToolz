@@ -534,11 +534,11 @@ export async function sendFeedbackAction(
   }
 
   const embed = {
-    title: `New ${type} Submission`,
-    color: type === 'Bug Report' ? 15548997 : 3447003, // Red for bug, blue for feedback
+    title: type === 'Bug Report' ? `🐛 Bug Report` : `💡 Feedback`,
+    color: type === 'Bug Report' ? 15548997 : 5793266, // Red for bug, Green for feedback
     fields: [
       {
-        name: 'Message',
+        name: '📝 Message',
         value: message,
       },
     ],
@@ -547,12 +547,17 @@ export async function sendFeedbackAction(
     },
   };
   
+  const fields: { name: string; value: string; inline?: boolean }[] = [];
   if (name) {
-    embed.fields.push({ name: 'From', value: name });
+    fields.push({ name: '👤 From', value: name, inline: true });
   }
   if (email) {
-     embed.fields.push({ name: 'Email', value: email });
+     fields.push({ name: '✉️ Email', value: email, inline: true });
   }
+  if(fields.length > 0) {
+    embed.fields.push(...fields);
+  }
+
 
   try {
     const response = await fetch(webhookUrl, {
@@ -561,7 +566,8 @@ export async function sendFeedbackAction(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        username: 'GitToolz Feedback Bot',
+        username: 'GitToolz Feedback',
+        avatar_url: 'https://cdn-icons-png.flaticon.com/512/14915/14915729.png',
         embeds: [embed],
       }),
     });

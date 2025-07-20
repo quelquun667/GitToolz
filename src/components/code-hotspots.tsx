@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +8,7 @@ import { Loader2, Search, AlertCircle, Flame, GitBranch, BarChartHorizontalBig }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from 'recharts';
-import FileIcon from './file-icon';
+import { Progress } from './ui/progress';
 
 type Hotspot = {
   path: string;
@@ -29,6 +28,9 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
   const [error, setError] = useState<string | null>(null);
   const [hotspots, setHotspots] = useState<Hotspot[] | null>(null);
 
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+
   const handleFetchHotspots = async () => {
     if (!branch) {
       toast({ variant: 'destructive', title: 'Please select a branch.' });
@@ -38,6 +40,8 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
     setIsLoading(true);
     setError(null);
     setHotspots(null);
+    setProgress(0);
+    setProgressMessage('');
 
     try {
       const response = await fetch('/api/get-hotspots', {
@@ -45,19 +49,48 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl, branch }),
       });
-      const result = await response.json();
-      if (!response.ok || result.error) {
-        throw new Error(result.error || 'Failed to fetch code hotspots.');
-      }
       
-      const sortedHotspots = result.hotspots.sort((a: Hotspot, b: Hotspot) => b.commitCount - a.commitCount).slice(0, 15);
-      setHotspots(sortedHotspots);
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i];
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.error) throw new Error(parsed.error);
+              if (parsed.status) setProgressMessage(parsed.status);
+              if (parsed.progress) setProgress(parsed.progress);
+              if (parsed.hotspots) {
+                 const sortedHotspots = parsed.hotspots.sort((a: Hotspot, b: Hotspot) => b.commitCount - a.commitCount).slice(0, 15);
+                 setHotspots(sortedHotspots);
+              }
+            } catch (e) {
+              console.error("Failed to parse stream data chunk:", data, e);
+            }
+          }
+        }
+        buffer = lines[lines.length - 1];
+      }
 
     } catch (e: any) {
       setError(e.message);
       toast({ variant: 'destructive', title: 'Error', description: e.message });
     } finally {
       setIsLoading(false);
+      setProgress(0);
+      setProgressMessage('');
     }
   };
 
@@ -88,9 +121,11 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
       <CardContent className="flex-1 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4 rounded-lg border-2 border-dashed border-border/60">
             {isLoading && (
-              <div className="text-center">
+              <div className="text-center w-full max-w-md">
                 <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-                <p className="mt-4 text-muted-foreground">Analyzing commit history... This may take a moment.</p>
+                <p className="mt-4 text-muted-foreground">{progressMessage || 'Analyzing commit history...'}</p>
+                <Progress value={progress} className="mt-4" />
+                <p className="text-sm text-muted-foreground mt-2">{Math.round(progress)}%</p>
               </div>
             )}
             {error && (
@@ -108,30 +143,38 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
                 </div>
             )}
              {!isLoading && !error && hotspots && (
-                 <ResponsiveContainer width="100%" height={500}>
-                    <BarChart layout="vertical" data={hotspots} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                        <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                        <YAxis 
-                            dataKey="path" 
-                            type="category" 
-                            width={150} 
-                            tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }} 
-                            tickFormatter={(value) => value.length > 20 ? `...${value.slice(-17)}` : value}
-                        />
-                        <Tooltip
-                            cursor={{ fill: 'hsl(var(--accent))' }}
-                            contentStyle={{ 
-                                background: 'hsl(var(--background))', 
-                                border: '1px solid hsl(var(--border))',
-                                borderRadius: 'var(--radius)'
-                            }}
-                            labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        />
-                        <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
-                           <LabelList dataKey="commitCount" position="right" offset={10} className="fill-foreground font-semibold" />
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
+                 hotspots.length === 0 ? (
+                    <div className="text-center">
+                        <BarChartHorizontalBig className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-4 text-lg font-medium">No Data</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">Could not find any file changes in the recent commit history.</p>
+                    </div>
+                 ) : (
+                    <ResponsiveContainer width="100%" height={500}>
+                        <BarChart layout="vertical" data={hotspots} margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+                            <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
+                            <YAxis 
+                                dataKey="path" 
+                                type="category" 
+                                width={150} 
+                                tick={{ fill: 'hsl(var(--foreground))', fontSize: 12 }} 
+                                tickFormatter={(value) => value.length > 20 ? `...${value.slice(-17)}` : value}
+                            />
+                            <Tooltip
+                                cursor={{ fill: 'hsl(var(--accent))' }}
+                                contentStyle={{ 
+                                    background: 'hsl(var(--background))', 
+                                    border: '1px solid hsl(var(--border))',
+                                    borderRadius: 'var(--radius)'
+                                }}
+                                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                            />
+                            <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                               <LabelList dataKey="commitCount" position="right" offset={10} className="fill-foreground font-semibold" />
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                 )
              )}
         </div>
       </CardContent>

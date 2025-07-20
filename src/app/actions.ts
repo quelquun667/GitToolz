@@ -16,7 +16,7 @@ import {
   getRepoDiff, 
   getCommitHistory,
   getRepoContributors,
-  getRepoFileCommits,
+  streamRepoFileCommits,
   getRepoIssues
 } from '@/services/github';
 import { z } from 'zod';
@@ -366,16 +366,31 @@ export async function getContributorStatsAction(input: z.infer<typeof analysisSc
     }
 }
 
-export async function getCodeHotspotsAction(input: z.infer<typeof analysisSchema>) {
+export async function streamCodeHotspotsAction(input: z.infer<typeof analysisSchema>) {
     const validatedFields = analysisSchema.safeParse(input);
-    if (!validatedFields.success) return { error: 'Invalid input.' };
-    try {
-        const hotspots = await getRepoFileCommits(validatedFields.data.repoUrl, validatedFields.data.branch);
-        return { hotspots };
-    } catch (e) {
-        const error = e instanceof Error ? e.message : 'An unknown error occurred.';
-        return { error };
+    if (!validatedFields.success) {
+      const errorStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(JSON.stringify({ error: 'Invalid input.' }));
+          controller.close();
+        },
+      });
+      return errorStream;
     }
+
+    const hotspotsStream = streamRepoFileCommits(validatedFields.data.repoUrl, validatedFields.data.branch);
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        for await (const chunk of hotspotsStream) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+        }
+        controller.close();
+      },
+    });
+
+  return stream;
 }
 
 export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>): Promise<AnalyzeIssuesOutput | { error: string }> {
@@ -383,6 +398,9 @@ export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>)
     if (!validatedFields.success) return { error: 'Invalid input.' };
     try {
         const issues = await getRepoIssues(validatedFields.data.repoUrl);
+        if (issues.length === 0) {
+            return { totalOpen: 0, totalClosed: 0, categorizedIssues: [], keyThemes: [] };
+        }
         const aiInput: AnalyzeIssuesInput = {
             issues: issues.map(issue => ({
                 title: issue.title,

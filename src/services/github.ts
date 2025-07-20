@@ -1,5 +1,3 @@
-
-
 import { Octokit } from '@octokit/rest';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -141,7 +139,12 @@ export async function getRepoCommitsByDate(repoUrl: string, branch: string, star
         });
 
         if (data) {
-            return data.map(commit => ({
+            const sortedCommits = data.sort((a, b) => {
+                const dateA = a.commit.author?.date ? new Date(a.commit.author.date).getTime() : 0;
+                const dateB = b.commit.author?.date ? new Date(b.commit.author.date).getTime() : 0;
+                return dateB - dateA;
+            });
+            return sortedCommits.map(commit => ({
                 sha: commit.sha,
                 message: commit.commit.message,
                 author: commit.author?.login ?? 'Unknown',
@@ -282,18 +285,26 @@ export async function getRepoContributors(repoUrl: string): Promise<any[]> {
     }
 }
 
-export async function getRepoFileCommits(repoUrl: string, branch: string): Promise<{ path: string; commitCount: number }[]> {
+export async function* streamRepoFileCommits(repoUrl: string, branch: string): AsyncGenerator<{ status?: string, progress?: number, hotspots?: { path: string; commitCount: number }[], error?: string }> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
+        yield { status: 'Fetching commit history...' };
         const commits = await octokit.paginate(octokit.rest.repos.listCommits, {
             owner,
             repo,
             sha: branch,
-            per_page: 100, // Look at the last 100 commits for performance
+            per_page: 100,
         });
 
-        const fileCounts: Record<string, number> = {};
+        if (commits.length === 0) {
+            yield { hotspots: [] };
+            return;
+        }
 
+        const fileCounts: Record<string, number> = {};
+        yield { status: 'Analyzing commits...', progress: 0 };
+        
+        let processedCommits = 0;
         for (const commit of commits) {
             const { data: commitData } = await octokit.rest.repos.getCommit({
                 owner,
@@ -308,12 +319,21 @@ export async function getRepoFileCommits(repoUrl: string, branch: string): Promi
                     }
                 }
             }
+            processedCommits++;
+            const progress = (processedCommits / commits.length) * 100;
+            yield { 
+                status: `Analyzing commit ${processedCommits} of ${commits.length}...`, 
+                progress: progress 
+            };
         }
 
-        return Object.entries(fileCounts).map(([path, commitCount]) => ({ path, commitCount }));
+        const hotspots = Object.entries(fileCounts).map(([path, commitCount]) => ({ path, commitCount }));
+        yield { status: 'Finalizing analysis...', progress: 100 };
+        yield { hotspots };
+
     } catch (e: any) {
         console.error('GitHub API Error fetching file commits:', e);
-        throw new Error('Failed to analyze file commit history.');
+        yield { error: 'Failed to analyze file commit history.' };
     }
 }
 

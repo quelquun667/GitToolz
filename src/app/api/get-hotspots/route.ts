@@ -1,4 +1,4 @@
-import { getCodeHotspotsAction } from '@/app/actions';
+import { streamCodeHotspotsAction } from '@/app/actions';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -12,17 +12,15 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await getCodeHotspotsAction({ repoUrl, branch });
+    const stream = await streamCodeHotspotsAction({ repoUrl, branch });
 
-    if (result.error) {
-        return new NextResponse(JSON.stringify({ error: result.error }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
-    }
-
-    return NextResponse.json(result);
-
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    });
   } catch (error) {
     console.error('API Error in get-hotspots:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

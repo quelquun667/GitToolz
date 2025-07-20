@@ -78,6 +78,13 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
     }
   }, [branches]);
 
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
+    if (date && endDate && date > endDate) {
+      setEndDate(undefined);
+    }
+  };
+
   const handleFetchCommits = async () => {
     if (!repoUrl || !branch || !startDate || !endDate) {
       toast({
@@ -375,19 +382,35 @@ export default function ChangelogGenerator({ repoUrl, branches }: ChangelogGener
                         {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar 
+                        mode="single" 
+                        selected={startDate} 
+                        onSelect={handleStartDateChange} 
+                        disabled={{ after: new Date() }}
+                        initialFocus 
+                      />
+                    </PopoverContent>
                   </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">End Date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")} disabled={!startDate}>
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar 
+                        mode="single" 
+                        selected={endDate} 
+                        onSelect={setEndDate} 
+                        disabled={{ after: new Date(), before: startDate }}
+                        initialFocus 
+                      />
+                    </PopoverContent>
                   </Popover>
                 </div>
               </div>

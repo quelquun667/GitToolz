@@ -64,6 +64,13 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     }
   }, [branches]);
   
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
+    if (date && endDate && date > endDate) {
+      setEndDate(undefined);
+    }
+  };
+
   const handleFetchRangeCommits = async () => {
     if (!rangeBranch || !startDate || !endDate) {
       toast({ variant: 'destructive', title: 'Information manquante', description: 'Veuillez sélectionner une branche et une plage de dates.' });
@@ -178,9 +185,9 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
       layout: {
         hierarchical: {
           enabled: true,
-          direction: 'UD',
+          direction: 'LR',
           sortMethod: 'directed',
-          levelSeparation: 100,
+          levelSeparation: 200,
           nodeSpacing: 150,
         },
       },
@@ -209,7 +216,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         },
         smooth: {
             type: 'cubicBezier',
-            forceDirection: 'vertical',
+            forceDirection: 'horizontal',
             roundness: 0.4
         }
       },
@@ -226,19 +233,20 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     networkInstanceRef.current = network;
 
     const fitGraph = () => {
-        if (network) {
+        if (network && visJsRef.current && visJsRef.current.offsetParent) {
             network.fit();
         }
     };
-    setTimeout(fitGraph, 100);
-    window.addEventListener('resize', fitGraph);
     
+    // Using a timeout allows the container to render and have dimensions before fitting.
+    setTimeout(fitGraph, 100);
+    
+    // Also add a resize observer for dynamic resizing.
     const container = visJsRef.current;
     const observer = new ResizeObserver(fitGraph);
     if(container) observer.observe(container);
 
     return () => {
-      window.removeEventListener('resize', fitGraph);
       if(container) observer.unobserve(container);
       if (network) {
         network.destroy();
@@ -307,24 +315,40 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
                         <Label>Date de début</Label>
                         <Popover>
                             <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+                              <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {startDate ? format(startDate, "PPP") : <span>Date</span>}
-                            </Button>
+                              </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+                            <PopoverContent className="w-auto p-0">
+                               <Calendar 
+                                mode="single" 
+                                selected={startDate} 
+                                onSelect={handleStartDateChange} 
+                                disabled={{ after: new Date() }}
+                                initialFocus 
+                              />
+                            </PopoverContent>
                         </Popover>
                         </div>
                         <div className="space-y-2">
                         <Label>Date de fin</Label>
                         <Popover>
                             <PopoverTrigger asChild>
-                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+                              <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")} disabled={!startDate}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {endDate ? format(endDate, "PPP") : <span>Date</span>}
-                            </Button>
+                              </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
+                            <PopoverContent className="w-auto p-0">
+                               <Calendar 
+                                mode="single" 
+                                selected={endDate} 
+                                onSelect={setEndDate} 
+                                disabled={{ after: new Date(), before: startDate }}
+                                initialFocus 
+                              />
+                            </PopoverContent>
                         </Popover>
                         </div>
                     </div>

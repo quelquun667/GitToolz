@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -23,10 +24,10 @@ type CommitSelectorProps = {
   repoUrl: string;
   branches: string[];
   onCommitSelect: (sha: string) => void;
-  instanceId: string; // To differentiate between multiple instances
+  instanceId?: string; // To differentiate between multiple instances
 };
 
-export default function CommitSelector({ repoUrl, branches, onCommitSelect, instanceId }: CommitSelectorProps) {
+export default function CommitSelector({ repoUrl, branches, onCommitSelect, instanceId = 'default' }: CommitSelectorProps) {
   const { toast } = useToast();
   
   const [branch, setBranch] = useState('');
@@ -88,9 +89,9 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
   const isFetchDisabled = !repoUrl || !branch || isFetchingCommits;
 
   return (
-    <div className="space-y-4 p-2 border rounded-md">
+    <div className="space-y-4 p-2 border rounded-md bg-muted/20">
       <div className="space-y-2">
-        <Label className="flex items-center gap-2 text-xs"><GitBranch className="h-3 w-3 text-primary" />Branch</Label>
+        <Label className="flex items-center gap-2 text-xs"><GitBranch className="h-3 w-3 text-primary" />Branche</Label>
         <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
           <SelectTrigger className="h-8"><SelectValue placeholder="Sélectionner une branche" /></SelectTrigger>
           <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
@@ -101,7 +102,7 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
           <Label className="text-xs">Date de début</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
+              <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal bg-background", !startDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {startDate ? format(startDate, "MMM d") : <span>Date</span>}
               </Button>
@@ -113,7 +114,7 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
           <Label className="text-xs">Date de fin</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
+              <Button size="sm" variant="outline" className={cn("w-full h-8 justify-start text-left font-normal bg-background", !endDate && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {endDate ? format(endDate, "MMM d") : <span>Date</span>}
               </Button>
@@ -123,18 +124,18 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
         </div>
       </div>
       <Button onClick={handleFetchCommits} size="sm" className="w-full h-8" disabled={isFetchDisabled}>
-        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Récupération...</> : <><Search className="mr-2 h-4 w-4" />Récupérer</>}
+        {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Récupération...</> : <><Search className="mr-2 h-4 w-4" />Récupérer Commits</>}
       </Button>
 
       {allCommits.length > 0 && (
         <div className="space-y-2 pt-2">
-          <Label className="text-xs text-muted-foreground">Select Commit</Label>
-          <ScrollArea className="h-40 rounded-md border">
+          <Label className="text-xs text-muted-foreground">Sélectionner un Commit</Label>
+          <ScrollArea className="h-40 rounded-md border bg-background">
             <RadioGroup value={selectedSha} onValueChange={handleSelectCommit} className="p-2">
               {allCommits.map(commit => (
-                <div key={`${instanceId}-${commit.sha}`} className="flex items-center space-x-2">
+                <div key={`${instanceId}-${commit.sha}`} className="flex items-center space-x-2 p-1 rounded hover:bg-muted">
                   <RadioGroupItem value={commit.sha} id={`${instanceId}-${commit.sha}`} />
-                  <Label htmlFor={`${instanceId}-${commit.sha}`} className="font-normal text-sm cursor-pointer leading-tight">
+                  <Label htmlFor={`${instanceId}-${commit.sha}`} className="font-normal text-sm cursor-pointer leading-tight w-full">
                     <p className="font-mono text-xs text-muted-foreground">{commit.sha.substring(0, 7)}</p>
                     <p className="truncate">{commit.message.split('\n')[0]}</p>
                   </Label>

@@ -44,6 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { cn } from '@/lib/utils';
 import { getRepoFileContent } from '@/services/github';
+import FileIcon from './file-icon';
 
 
 const DOC_SECTIONS = [
@@ -473,10 +474,9 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     if (editedDocumentation !== null) {
       return (
          <Card className="flex-1 flex flex-col shadow-lg overflow-hidden">
-           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+           <CardHeader>
               <div className="flex-grow">
                 <CardTitle>Documentation for <span className="text-primary">{repoPath}</span></CardTitle>
-                <CardDescription>This is the generated documentation for your project.</CardDescription>
               </div>
             </CardHeader>
             <Separator/>
@@ -493,7 +493,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                     </TabsTrigger>
                 </TabsList>
               </div>
-               <TabsContent value="documentation" className="flex-1 flex flex-col overflow-auto mt-0">
+               <TabsContent value="documentation" className="flex-1 flex flex-col overflow-auto mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
                   <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-4 border-b bg-muted/50">
                      <div className="flex items-center space-x-2">
                         <Label htmlFor="view-mode" className={cn("text-sm", viewMode === 'raw' ? 'text-primary' : 'text-muted-foreground')}>Raw</Label>
@@ -557,12 +557,15 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                     </div>
                   </ScrollArea>
               </TabsContent>
-              <TabsContent value="files" className="flex-1 overflow-auto mt-0">
+              <TabsContent value="files" className="flex-1 overflow-auto mt-0 data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:slide-in-from-top-2 data-[state=inactive]:animate-out data-[state=inactive]:fade-out-0">
                 <ScrollArea className="h-full">
                   <div className="p-6 text-sm">
-                    <ul className="space-y-2">
+                    <ul className="space-y-1">
                       {fileTree.map((file, index) => (
-                        <li key={index} className="font-mono text-muted-foreground">{file}</li>
+                        <li key={index} className="font-mono text-muted-foreground flex items-center gap-2 p-1 rounded-md hover:bg-muted">
+                           <FileIcon filename={file} />
+                           <span>{file}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>

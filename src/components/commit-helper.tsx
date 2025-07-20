@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { cn } from '@/lib/utils';
 import CommitSelector from './commit-selector';
+import { Input } from './ui/input';
 
 type CommitHelperProps = {
   repoUrl: string;
@@ -110,7 +111,7 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text).then(() => {
         setCopiedIndex(id);
-        toast({ title: 'Copié !', description: 'La commande a été copiée.' });
+        toast({ title: 'Copié !', description: 'La commande a été copiée dans le presse-papiers.' });
         setTimeout(() => setCopiedIndex(null), 2000);
     });
   };
@@ -176,23 +177,25 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
                             const amendCommand = `git commit --amend -m "${commitMessage}"`;
 
                             return (
-                                <div key={index} className="p-3 rounded-lg bg-muted/50 space-y-2">
+                                <div key={index} className="p-3 rounded-lg bg-muted/50 space-y-3">
                                     <div className="flex items-start gap-3">
                                         <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-1 rounded-full mt-0.5">{suggestion.type}</span>
                                         <p className="flex-1 text-sm">{suggestion.message}</p>
                                     </div>
-                                    <div className="flex flex-col sm:flex-row gap-2 pl-3">
-                                        <div className="flex-1 flex items-center gap-2 text-xs p-2 rounded bg-background/50">
-                                            <code className="truncate">{normalCommand}</code>
-                                            <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleCopy(normalCommand, `normal-${index}`)}>
-                                                {copiedIndex === `normal-${index}` ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <Input readOnly value={normalCommand} className="h-9 bg-background/50 text-xs font-mono" />
+                                            <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={() => handleCopy(normalCommand, `normal-${index}`)}>
+                                                {copiedIndex === `normal-${index}` ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                                                Copier
                                             </Button>
                                         </div>
                                         {compareMode === 'commit' && (
-                                            <div className="flex-1 flex items-center gap-2 text-xs p-2 rounded bg-background/50">
-                                                <code className="truncate">{amendCommand}</code>
-                                                <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleCopy(amendCommand, `amend-${index}`)}>
-                                                    {copiedIndex === `amend-${index}` ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                            <div className="flex gap-2">
+                                                <Input readOnly value={amendCommand} className="h-9 bg-background/50 text-xs font-mono" />
+                                                <Button size="sm" variant="outline" className="text-primary border-primary hover:bg-primary/10 hover:text-primary" onClick={() => handleCopy(amendCommand, `amend-${index}`)}>
+                                                    {copiedIndex === `amend-${index}` ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                                                    Copier
                                                 </Button>
                                             </div>
                                         )}
@@ -340,5 +343,3 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
     </div>
   );
 }
-
-    

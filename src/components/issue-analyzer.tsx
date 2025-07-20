@@ -59,13 +59,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
         throw new Error(result.error || 'Failed to analyze issues.');
       }
       
-      // Check if there's any actual data to display
-      const totalIssues = result.totalOpen + result.totalClosed;
-      if (totalIssues === 0 && result.categorizedIssues.length === 0) {
-        setAnalysis({ totalOpen: 0, totalClosed: 0, categorizedIssues: [], keyThemes: [] });
-      } else {
-        setAnalysis(result);
-      }
+      setAnalysis(result);
 
     } catch (e: any) {
       setError(e.message);
@@ -76,7 +70,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
   };
 
   const isFetchDisabled = isLoading || !branch;
-  const noIssuesFound = analysis && analysis.totalOpen === 0 && analysis.totalClosed === 0;
+  const noIssuesFound = analysis && analysis.totalOpen === 0 && analysis.totalClosed === 0 && analysis.categorizedIssues.length === 0;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-200px)] bg-card text-foreground">

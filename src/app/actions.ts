@@ -166,10 +166,11 @@ export async function fetchCommitsAction(
     
     try {
       const commits = await getRepoCommitsByDate(validatedFields.data.repoUrl, validatedFields.data.branch, validatedFields.data.startDate, validatedFields.data.endDate);
-      if (commits.length === 0) {
+      const sortedCommits = commits.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      if (sortedCommits.length === 0) {
         return { error: 'No commits found in the specified date range.' };
       }
-      return { commits };
+      return { commits: sortedCommits };
     } catch (e) {
       const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
       return { error };
@@ -398,9 +399,11 @@ export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>)
     if (!validatedFields.success) return { error: 'Invalid input.' };
     try {
         const issues = await getRepoIssues(validatedFields.data.repoUrl);
+        // If there are no issues, return a specific structure immediately without calling the AI.
         if (issues.length === 0) {
             return { totalOpen: 0, totalClosed: 0, categorizedIssues: [], keyThemes: [] };
         }
+        
         const aiInput: AnalyzeIssuesInput = {
             issues: issues.map(issue => ({
                 title: issue.title,
@@ -408,8 +411,10 @@ export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>)
                 labels: issue.labels.map(l => typeof l === 'string' ? l : l.name).filter((n): n is string => !!n),
             }))
         };
+
         const analysis = await analyzeIssues(aiInput);
         return analysis;
+
     } catch (e) {
         const error = e instanceof Error ? e.message : 'An unknown error occurred.';
         return { error };

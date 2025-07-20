@@ -190,3 +190,35 @@ export async function getRepoDiff(repoUrl: string, base: string, head: string): 
         throw new Error('Failed to fetch diff from GitHub.');
     }
 }
+
+export async function getCommitHistory(repoUrl: string, branch: string): Promise<{sha: string, message: string, author: string | null, parents: string[]}[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const { data } = await octokit.rest.repos.listCommits({
+            owner,
+            repo,
+            sha: branch,
+            per_page: 100, // Max commits to fetch for the graph
+        });
+
+        if (data) {
+            return data.map(commit => ({
+                sha: commit.sha,
+                message: commit.commit.message,
+                author: commit.author?.login ?? 'Unknown',
+                parents: commit.parents.map(p => p.sha),
+            }));
+        }
+
+        return [];
+    } catch(error: any) {
+        if (error.status === 404) {
+            throw new Error(`Could not find the specified branch: "${branch}".`);
+        }
+         if (error.status === 401) {
+            throw new Error('GitHub API authentication failed. Please check your GITHUB_TOKEN.');
+        }
+        console.error('GitHub API Error:', error);
+        throw new Error('Failed to fetch commits from GitHub.');
+    }
+}

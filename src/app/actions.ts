@@ -1,4 +1,3 @@
-
 'use server';
 
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
@@ -7,7 +6,7 @@ import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/gener
 import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
 import { extractFunctions } from '@/ai/flows/extract-functions-flow';
 import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
-import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService, getRepoDiff } from '@/services/github';
+import { getRepoBranches, getRepoCommitsByDate, getRepoFileContent, getRepoTree as getRepoTreeService, validateRepo as validateRepoService, getRepoDiff, getCommitHistory } from '@/services/github';
 import { z } from 'zod';
 
 const docFormSchema = z.object({
@@ -44,6 +43,11 @@ const validateRepoSchema = z.object({
 });
 
 const fetchTreeSchema = z.object({
+  repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }),
+  branch: z.string().min(1, { message: 'Branch is required.' }),
+});
+
+const fetchCommitGraphSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }),
   branch: z.string().min(1, { message: 'Branch is required.' }),
 });
@@ -302,5 +306,25 @@ export async function commitHelperAction(
     } catch (e) {
         const error = e instanceof Error ? e.message : 'An unknown error occurred.';
         return { error };
+    }
+}
+
+export async function fetchCommitGraphAction(
+  input: z.infer<typeof fetchCommitGraphSchema>
+): Promise<{ commits?: { sha: string; message: string; author: string | null, parents: string[] }[]; error?: string }> {
+    const validatedFields = fetchCommitGraphSchema.safeParse(input);
+    if (!validatedFields.success) {
+      return { error: "Invalid input." };
+    }
+    
+    try {
+      const commits = await getCommitHistory(validatedFields.data.repoUrl, validatedFields.data.branch);
+      if (commits.length === 0) {
+        return { error: 'No commits found in the specified branch.' };
+      }
+      return { commits };
+    } catch (e) {
+      const error = e instanceof Error ? e.message : 'An unknown error occurred during generation.';
+      return { error };
     }
 }

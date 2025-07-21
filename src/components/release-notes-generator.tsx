@@ -166,41 +166,43 @@ export default function ReleaseNotesGenerator({ repoUrl, branches }: ReleaseNote
       const decoder = new TextDecoder();
       let buffer = '';
 
-      while(true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const processStream = async () => {
+        while(true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n\n');
-        
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i];
-          if (line.startsWith('data: ')) {
-            const data = line.substring(6);
-            try {
-              const parsed = JSON.parse(data);
-              if (parsed.error) {
-                  toast({
-                      variant: 'destructive',
-                      title: 'Generation Failed',
-                      description: parsed.error,
-                  });
-                  setIsGenerating(false);
-                  return;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          
+          for (let i = 0; i < lines.length - 1; i++) {
+            const line = lines[i];
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6);
+              try {
+                const parsed = JSON.parse(data);
+                if (parsed.error) {
+                    toast({
+                        variant: 'destructive',
+                        title: 'Generation Failed',
+                        description: parsed.error,
+                    });
+                    setIsGenerating(false);
+                    return;
+                }
+                if (parsed.status) {
+                    setGenerationLog(prev => [...prev, parsed.status]);
+                }
+                if (parsed.releaseNotes) {
+                    setReleaseNotes(parsed.releaseNotes);
+                }
+              } catch (e) {
+                console.error("Failed to parse stream data chunk:", data, e);
               }
-              if (parsed.status) {
-                  setGenerationLog(prev => [...prev, parsed.status]);
-              }
-              if (parsed.releaseNotes) {
-                  setReleaseNotes(parsed.releaseNotes);
-              }
-            } catch (e) {
-              console.error("Failed to parse stream data chunk:", data, e);
             }
           }
+          buffer = lines[lines.length - 1];
         }
-        buffer = lines[lines.length - 1];
-      }
+      };
       
       await processStream();
       setIsGenerating(false);

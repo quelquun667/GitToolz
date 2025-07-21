@@ -107,7 +107,14 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
                 {startDate ? format(startDate, "MMM d") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus /></PopoverContent>
+            <PopoverContent className="w-auto p-0">
+              <Calendar 
+                mode="single" 
+                selected={startDate} 
+                onSelect={setStartDate} 
+                disabled={{ after: new Date() }}
+                initialFocus />
+              </PopoverContent>
           </Popover>
         </div>
         <div className="space-y-2">
@@ -119,7 +126,14 @@ export default function CommitSelector({ repoUrl, branches, onCommitSelect, inst
                 {endDate ? format(endDate, "MMM d") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus /></PopoverContent>
+            <PopoverContent className="w-auto p-0">
+              <Calendar 
+                mode="single" 
+                selected={endDate} 
+                onSelect={setEndDate} 
+                disabled={{ after: new Date(), before: startDate }}
+                initialFocus />
+              </PopoverContent>
           </Popover>
         </div>
       </div>

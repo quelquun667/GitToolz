@@ -222,7 +222,14 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
                         {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startDate} onSelect={handleStartDateChange} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar 
+                        mode="single" 
+                        selected={startDate} 
+                        onSelect={handleStartDateChange} 
+                        disabled={{ after: new Date() }} 
+                        initialFocus />
+                      </PopoverContent>
                   </Popover>
                 </div>
                 <div className="space-y-2">
@@ -234,7 +241,14 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
                         {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={endDate} onSelect={setEndDate} disabled={{ before: startDate }} initialFocus /></PopoverContent>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar 
+                        mode="single" 
+                        selected={endDate} 
+                        onSelect={setEndDate} 
+                        disabled={{ after: new Date(), before: startDate }} 
+                        initialFocus />
+                      </PopoverContent>
                   </Popover>
                 </div>
               </div>

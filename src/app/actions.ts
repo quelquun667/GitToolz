@@ -66,8 +66,6 @@ const fetchTreeSchema = z.object({
 const fetchCommitGraphSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }),
   branch: z.string().min(1, { message: 'Branch is required.' }),
-  startSha: z.string().optional(),
-  endSha: z.string().optional(),
 });
 
 const testCaseFormSchema = z.object({
@@ -363,9 +361,7 @@ export async function fetchCommitGraphAction(
     try {
       const commits = await getCommitHistory(
         validatedFields.data.repoUrl, 
-        validatedFields.data.branch,
-        validatedFields.data.startSha,
-        validatedFields.data.endSha
+        validatedFields.data.branch
       );
       if (commits.length === 0) {
         return { error: 'No commits found in the specified branch or range.' };

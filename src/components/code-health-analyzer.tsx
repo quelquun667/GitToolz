@@ -12,6 +12,7 @@ import FileSelector from './file-selector';
 import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Label } from './ui/label';
 
 type CodeSmell = {
   type: string;

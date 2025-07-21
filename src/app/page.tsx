@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck, ShieldAlert } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck, ShieldAlert, UserPlus, Fingerprint, Annoyed } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -49,10 +49,12 @@ const THEME_COLORS = [
 const assistantFeatures = [
     { icon: FileCode2, title: "Generate Documentation", description: "Create a complete README.md from your code." },
     { icon: History, title: "Create Changelogs", description: "Generate structured changelogs from commits." },
+    { icon: Annoyed, title: "Write Release Notes", description: "Create user-friendly release announcements." },
     { icon: TestTube2, title: "Generate Test Cases", description: "Instantly create unit tests for your functions." },
     { icon: MessageSquarePlus, title: "Suggest Commit Messages", description: "Get conventional commit suggestions for your diffs." },
     { icon: Languages, title: "Translate Code", description: "Convert code snippets between programming languages." },
     { icon: MessageSquareQuote, title: "Generate Comments", description: "Add documentation comments to your functions." },
+    { icon: UserPlus, title: "Onboarding Assistant", description: "Generate a getting-started guide for new developers." },
 ];
 
 const analysisFeatures = [
@@ -63,6 +65,7 @@ const analysisFeatures = [
     { icon: GitMerge, title: "Branch Activity", description: "View the status of all repository branches." },
     { icon: ShieldCheck, title: "Code Health", description: "Get an AI-powered analysis of your code quality." },
     { icon: PackageCheck, title: "Dependency Analysis", description: "Check for outdated or unused packages." },
+    { icon: Fingerprint, title: "Regression Detective", description: "Find commits that may have introduced a bug." },
 ];
 
 

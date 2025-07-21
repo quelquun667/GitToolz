@@ -13,6 +13,8 @@ import { translateCode, type TranslateCodeInput } from '@/ai/flows/translate-cod
 import { generateComments, type GenerateCommentsInput } from '@/ai/flows/generate-comments-flow';
 import { analyzeCodeHealth, type AnalyzeCodeHealthInput } from '@/ai/flows/code-health-flow';
 import { analyzeDependencies, type AnalyzeDependenciesInput } from '@/ai/flows/dependency-analyzer-flow';
+import { generateOnboardingGuide, type GenerateOnboardingGuideInput } from '@/ai/flows/generate-onboarding-guide-flow';
+import { findRegression, type FindRegressionInput } from '@/ai/flows/find-regression-flow';
 
 import { 
   getRepoBranches, 
@@ -635,6 +637,38 @@ export async function analyzeDependenciesAction(input: AnalyzeDependenciesInput)
         const error = e instanceof Error ? e.message : 'An unknown error occurred during dependency analysis.';
         return { error };
     }
+}
+
+export async function streamOnboardingGuideAction(
+  input: GenerateOnboardingGuideInput
+): Promise<ReadableStream> {
+  const onboardingStream = generateOnboardingGuide(input);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of onboardingStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+  return stream;
+}
+
+export async function streamRegressionDetectiveAction(
+  input: FindRegressionInput
+): Promise<ReadableStream> {
+  const regressionStream = findRegression(input);
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of regressionStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    },
+  });
+  return stream;
 }
 
 

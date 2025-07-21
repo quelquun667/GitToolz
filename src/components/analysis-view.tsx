@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveTabs } from '@/components/responsive-tabs';
-import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck } from 'lucide-react';
+import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck, Fingerprint } from 'lucide-react';
 import CommitGraph from '@/components/commit-graph';
 import ContributorDashboard from './contributor-dashboard';
 import CodeHotspots from './code-hotspots';
@@ -11,6 +11,7 @@ import IssueAnalyzer from './issue-analyzer';
 import BranchActivity from './branch-activity';
 import CodeHealthAnalyzer from './code-health-analyzer';
 import DependencyAnalyzer from './dependency-analyzer';
+import RegressionDetective from './regression-detective';
 
 type AnalysisViewProps = {
   repoUrl: string;
@@ -52,6 +53,11 @@ const analysisTabs = [
     value: "dependencies",
     label: "Dependencies",
     icon: PackageCheck,
+  },
+  {
+    value: "regression",
+    label: "Regression",
+    icon: Fingerprint,
   }
 ];
 
@@ -80,6 +86,9 @@ export default function AnalysisView({ repoUrl, branches }: AnalysisViewProps) {
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="dependencies">
               <DependencyAnalyzer repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="regression">
+              <RegressionDetective repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
           </CardContent>
         </Card>

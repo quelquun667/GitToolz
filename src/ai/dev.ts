@@ -14,3 +14,5 @@ import '@/ai/flows/generate-comments-flow.ts';
 import '@/ai/flows/code-health-flow.ts';
 import '@/ai/flows/dependency-analyzer-flow.ts';
 import '@/ai/flows/generate-release-notes-flow.ts';
+import '@/ai/flows/generate-onboarding-guide-flow.ts';
+import '@/ai/flows/find-regression-flow.ts';

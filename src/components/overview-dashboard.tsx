@@ -12,6 +12,8 @@ import LanguageDistributionChart from './language-distribution-chart';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
+import TopContributors from './top-contributors';
+import RecentActivityFeed from './recent-activity-feed';
 
 type OverviewDashboardProps = {
   stats: OverviewStats | null;
@@ -83,90 +85,6 @@ const IssueChart = ({ openIssues = 0, closedIssues = 0 }: { openIssues?: number;
   );
 };
 
-const TopContributors = ({ contributors = [] }: { contributors?: any[] }) => (
-    <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Top Contributors</CardTitle>
-        </CardHeader>
-        <CardContent>
-            {contributors.length > 0 ? (
-                <div className="space-y-4">
-                    {contributors.map(c => (
-                        <a href={c.html_url} key={c.login} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 group">
-                            <Avatar className="h-10 w-10">
-                                <AvatarImage src={c.avatar_url} alt={c.login} />
-                                <AvatarFallback>{c.login.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                                <p className="font-semibold group-hover:text-primary">{c.login}</p>
-                                <p className="text-xs text-muted-foreground">{c.contributions} commits</p>
-                            </div>
-                        </a>
-                    ))}
-                </div>
-            ) : (
-                 <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                    <Users className="w-8 h-8" />
-                    <p className="mt-2 text-sm">No contributor data</p>
-                </div>
-            )}
-        </CardContent>
-    </Card>
-);
-
-const RecentActivityFeed = ({ activity = [] }: { activity?: any[] }) => {
-    const renderEvent = (event: any) => {
-        switch (event.type) {
-            case 'PushEvent':
-                return `Pushed ${event.payload.commits?.length || 0} commit(s)`;
-            case 'PullRequestEvent':
-                return `${event.payload.action} pull request #${event.payload.pull_request.number}`;
-            case 'IssuesEvent':
-                return `${event.payload.action} issue #${event.payload.issue.number}`;
-            case 'CreateEvent':
-                return `Created ${event.payload.ref_type} ${event.payload.ref || ''}`;
-            case 'DeleteEvent':
-                return `Deleted ${event.payload.ref_type} ${event.payload.ref}`;
-            default:
-                return event.type;
-        }
-    };
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5" /> Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {activity.length > 0 ? (
-                    <ScrollArea className="h-48">
-                        <div className="space-y-4">
-                            {activity.map(event => (
-                                <div key={event.id} className="flex items-start gap-3">
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={event.actor.avatar_url} alt={event.actor.display_login} />
-                                        <AvatarFallback>{event.actor.display_login.charAt(0).toUpperCase()}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="text-sm">
-                                            <span className="font-semibold">{event.actor.display_login}</span> {renderEvent(event)}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-                        <Activity className="w-8 h-8" />
-                        <p className="mt-2 text-sm">No recent activity</p>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
-
 export default function OverviewDashboard({ stats, repoUrl, onNavigate }: OverviewDashboardProps) {
   if (!stats) {
     return null;
@@ -196,9 +114,9 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Stars" value={stars.toLocaleString()} icon={Star} />
+            <StatCard title="Watchers" value={watchers.toLocaleString()} icon={Eye} />
             <StatCard title="Branches" value={branches.length} icon={GitBranch} />
             <StatCard title="Repo Size" value={formatBytes(repoSize)} icon={HardDrive} />
-            <StatCard title="Total Files" value={fileCount.toLocaleString()} icon={FileCode2} />
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

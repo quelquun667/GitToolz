@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck, ShieldAlert } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
 import { getRepoOverview, validateRepo } from '@/app/actions';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 type View = 'url-input' | 'overview' | 'assistants' | 'analysis';
 
@@ -266,6 +267,13 @@ export default function Home() {
                                     </div>
                                     {repoUrlError && <p className="text-xs text-destructive">{repoUrlError}</p>}
                                 </div>
+                                 <Alert>
+                                    <ShieldAlert className="h-4 w-4" />
+                                    <AlertTitle>Public Repositories Only</AlertTitle>
+                                    <AlertDescription>
+                                        Currently, GitToolz only supports public repositories. Private repository support is coming soon!
+                                    </AlertDescription>
+                                </Alert>
                             </CardContent>
                         </Card>
                     </div>

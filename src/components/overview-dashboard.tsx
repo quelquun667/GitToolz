@@ -114,8 +114,8 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
                         <CardHeader>
-                            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
-                                <Cpu className="h-7 w-7" />
+                            <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
+                                <Cpu className="h-6 w-6" />
                             </div>
                             <CardTitle className="text-xl">AI Assistants</CardTitle>
                             <CardDescription>Generate content and get help with your development tasks.</CardDescription>
@@ -128,10 +128,10 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
                     </Card>
                     <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
                         <CardHeader>
-                             <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
-                                <LineChart className="h-7 w-7" />
+                             <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
+                                <LineChart className="h-6 w-6" />
                             </div>
-                            <CardTitle className="text-xl">Analysis & Visualization</CardTitle>
+                            <CardTitle className="text-xl">Analysis &amp; Visualization</CardTitle>
                             <CardDescription>Explore your repository with interactive graphs and stats.</CardDescription>
                         </CardHeader>
                         <CardContent className="mt-auto">

@@ -225,14 +225,15 @@ export async function getCommitHistory(
 
 
 // Analysis Services
-export async function getRepoContributors(repoUrl: string): Promise<any[]> {
+export async function getRepoContributors(repoUrl: string, limit?: number): Promise<any[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
         const contributors = await octokit.paginate(octokit.rest.repos.listContributors, {
             owner,
             repo,
         });
-        return contributors.filter(c => c.type === 'User');
+        const filtered = contributors.filter(c => c.type === 'User');
+        return limit ? filtered.slice(0, limit) : filtered;
     } catch (e: any) {
         handleApiError(e, 'getRepoContributors');
     }
@@ -351,5 +352,39 @@ export async function getRepoBranchesWithDetails(repoUrl: string, defaultBranch:
 
     } catch (e: any) {
         handleApiError(e, 'getRepoBranchesWithDetails');
+    }
+}
+
+
+export async function getRepoLanguages(repoUrl: string): Promise<Record<string, number>> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const { data } = await octokit.rest.repos.listLanguages({
+            owner,
+            repo,
+        });
+        return data;
+    } catch (e: any) {
+        handleApiError(e, 'getRepoLanguages');
+    }
+}
+
+export async function getRepoEvents(repoUrl: string): Promise<any[]> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        const { data } = await octokit.rest.activity.listRepoEvents({
+            owner,
+            repo,
+            per_page: 20, // Fetch more events, we will filter them
+        });
+        return data.filter(event => 
+            event.type === 'PushEvent' || 
+            event.type === 'PullRequestEvent' || 
+            event.type === 'IssuesEvent' || 
+            event.type === 'CreateEvent' ||
+            event.type === 'DeleteEvent'
+        );
+    } catch (e: any) {
+        handleApiError(e, 'getRepoEvents');
     }
 }

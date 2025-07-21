@@ -8,24 +8,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, GitCommitHorizontal, Calendar as CalendarIcon, Check, Expand } from 'lucide-react';
+import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, Expand } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from './ui/scroll-area';
 
-type Commit = {
+type CommitNode = {
   sha: string;
   message: string;
   author: string | null;
-  date: string;
-};
-
-type CommitNode = Omit<Commit, 'date'> & {
   parents: string[];
 };
 
@@ -41,13 +33,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   const networkInstanceRef = useRef<Network | null>(null);
   const modalNetworkInstanceRef = useRef<Network | null>(null);
   
-  const [rangeBranch, setRangeBranch] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
-  const [isFetchingCommits, setIsFetchingCommits] = useState(false);
-  const [fetchedCommits, setFetchedCommits] = useState<Commit[]>([]);
-  const [startCommit, setStartCommit] = useState<string>('');
-  const [endCommit, setEndCommit] = useState<string>('');
+  const [branch, setBranch] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,50 +43,14 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   useEffect(() => {
     if (branches.length > 0) {
       const defaultBranch = branches.includes('main') ? 'main' : branches.includes('master') ? 'master' : branches[0];
-      setRangeBranch(defaultBranch);
+      setBranch(defaultBranch);
     }
   }, [branches]);
   
-  const handleStartDateChange = (date: Date | undefined) => {
-    setStartDate(date);
-    if (date && endDate && date > endDate) {
-      setEndDate(undefined);
-    }
-  };
-
-  const handleFetchRangeCommits = async () => {
-    if (!rangeBranch || !startDate || !endDate) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select a branch and a date range.' });
-      return;
-    }
-    setIsFetchingCommits(true);
-    setFetchedCommits([]);
-    setStartCommit('');
-    setEndCommit('');
-
-    try {
-      const response = await fetch('/api/fetch-commits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl, branch: rangeBranch, startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
-      });
-      const result = await response.json();
-      if (result.error || !response.ok) throw new Error(result.error || 'Failed to fetch commits.');
-      
-      const sortedCommits = result.commits.sort((a: Commit, b: Commit) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setFetchedCommits(sortedCommits);
-
-    } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Error', description: e.message });
-    } finally {
-      setIsFetchingCommits(false);
-    }
-  };
-
 
   const handleFetchAndDrawGraph = async () => {
-    if (!startCommit || !endCommit) {
-        toast({ variant: 'destructive', title: 'Please select a start and end commit.' });
+    if (!branch) {
+        toast({ variant: 'destructive', title: 'Please select a branch to start from.' });
         return;
     }
     
@@ -114,9 +64,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           repoUrl, 
-          branch: rangeBranch, // Used as a starting point, but the service will explore beyond it
-          startSha: startCommit,
-          endSha: endCommit,
+          branch,
         }),
       });
       const result = await response.json();
@@ -254,7 +202,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     }
   }, [isGraphModalOpen, graphData, drawGraph]);
   
-  const isFetchDisabled = isLoading || !startCommit || !endCommit;
+  const isFetchDisabled = isLoading || !branch;
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -262,87 +210,16 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Commit Graph</CardTitle>
-            <CardDescription>Visualize the commit history between two points in time across all branches.</CardDescription>
+            <CardDescription>Visualize the commit history and branch structure of your repository.</CardDescription>
           </CardHeader>
            <CardContent className="space-y-4">
                  <div className="space-y-2">
-                    <Label>Branch (to find commits)</Label>
-                    <Select onValueChange={setRangeBranch} value={rangeBranch} disabled={branches.length === 0}>
+                    <Label>Start from Branch</Label>
+                    <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
                       <SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger>
                       <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
                     </Select>
                  </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                    <Label>Start Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                           <Calendar 
-                            mode="single" 
-                            selected={startDate} 
-                            onSelect={handleStartDateChange} 
-                            disabled={{ after: new Date() }}
-                            initialFocus 
-                          />
-                        </PopoverContent>
-                    </Popover>
-                    </div>
-                    <div className="space-y-2">
-                    <Label>End Date</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")} disabled={!startDate}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                           <Calendar 
-                            mode="single" 
-                            selected={endDate} 
-                            onSelect={setEndDate} 
-                            disabled={{ after: new Date(), before: startDate }}
-                            initialFocus 
-                          />
-                        </PopoverContent>
-                    </Popover>
-                    </div>
-                </div>
-                <Button onClick={handleFetchRangeCommits} className="w-full" disabled={isFetchingCommits}>
-                    {isFetchingCommits ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Fetching...</> : <><Search className="mr-2 h-4 w-4" />Fetch Commits</>}
-                </Button>
-                {fetchedCommits.length > 0 && (
-                    <div className="space-y-4">
-                         <div className="space-y-2">
-                            <Label>Start Commit</Label>
-                            <Select onValueChange={setStartCommit} value={startCommit}>
-                                <SelectTrigger><SelectValue placeholder="Select start commit"/></SelectTrigger>
-                                <SelectContent>
-                                    <ScrollArea className="h-48">
-                                      {fetchedCommits.map(c => <SelectItem key={`start-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
-                                    </ScrollArea>
-                                </SelectContent>
-                            </Select>
-                         </div>
-                         <div className="space-y-2">
-                            <Label>End Commit</Label>
-                            <Select onValueChange={setEndCommit} value={endCommit}>
-                                <SelectTrigger><SelectValue placeholder="Select end commit"/></SelectTrigger>
-                                <SelectContent>
-                                   <ScrollArea className="h-48">
-                                    {fetchedCommits.map(c => <SelectItem key={`end-${c.sha}`} value={c.sha}><span className="font-mono text-xs">{c.sha.substring(0,7)}</span> - {c.message.split('\n')[0]}</SelectItem>)}
-                                   </ScrollArea>
-                                </SelectContent>
-                            </Select>
-                         </div>
-                    </div>
-                )}
             </CardContent>
         </Card>
 

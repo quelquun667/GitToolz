@@ -29,6 +29,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';

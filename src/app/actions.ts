@@ -4,6 +4,7 @@
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
 import { summarizeDocumentation } from '@/ai/flows/summarize-documentation';
 import { generateChangelog, type GenerateChangelogInput } from '@/ai/flows/generate-changelog';
+import { generateReleaseNotes, type GenerateReleaseNotesInput } from '@/ai/flows/generate-release-notes-flow';
 import { generateTestCases, type GenerateTestCasesInput } from '@/ai/flows/generate-test-cases';
 import { extractFunctions } from '@/ai/flows/extract-functions-flow';
 import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
@@ -58,6 +59,13 @@ const fetchCommitsSchema = z.object({
 const changelogFormSchema = z.object({
   commitMessages: z.array(z.string()).min(1, { message: 'Please select at least one commit.' }),
 });
+
+const releaseNotesFormSchema = z.object({
+  commitMessages: z.array(z.string()).min(1, { message: 'Please select at least one commit.' }),
+  versionNumber: z.string().optional(),
+  releaseDate: z.string().optional(),
+});
+
 
 const validateRepoSchema = z.object({
   repoUrl: z.string().url({ message: 'Please enter a valid Git repository URL.' }).min(1, { message: 'Repository URL is required.' }),
@@ -318,6 +326,36 @@ export async function streamChangelogAction(
     async start(controller) {
       const encoder = new TextEncoder();
       for await (const chunk of changelogStream) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      }
+      controller.close();
+    }
+  });
+
+  return stream;
+}
+
+export async function streamReleaseNotesAction(
+  input: GenerateReleaseNotesInput
+): Promise<ReadableStream> {
+  const validatedFields = releaseNotesFormSchema.safeParse(input);
+
+  if (!validatedFields.success) {
+     const errorStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(JSON.stringify({ error: "Invalid input." }));
+        controller.close();
+      }
+    });
+    return errorStream;
+  }
+
+  const releaseNotesStream = generateReleaseNotes(validatedFields.data);
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      for await (const chunk of releaseNotesStream) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
       }
       controller.close();

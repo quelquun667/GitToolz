@@ -13,3 +13,4 @@ import '@/ai/flows/translate-code-flow.ts';
 import '@/ai/flows/generate-comments-flow.ts';
 import '@/ai/flows/code-health-flow.ts';
 import '@/ai/flows/dependency-analyzer-flow.ts';
+import '@/ai/flows/generate-release-notes-flow.ts';

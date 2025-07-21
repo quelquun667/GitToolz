@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -32,8 +32,9 @@ import {
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
+import { getRepoOverview } from '@/app/actions';
 
-type View = 'url-input' | 'category-selection' | 'assistants' | 'analysis';
+type View = 'url-input' | 'overview' | 'assistants' | 'analysis';
 
 const THEME_COLORS = [
     { name: 'Violet', value: '300 100% 29.8%' },
@@ -58,10 +59,12 @@ const analysisFeatures = [
     { icon: Flame, title: "Code Hotspots", description: "Identify the most frequently changed files." },
     { icon: MessageCircleWarning, title: "Issue Analysis", description: "Get an AI-powered summary of project issues." },
     { icon: GitMerge, title: "Branch Activity", description: "View the status of all repository branches." },
+    { icon: ShieldCheck, title: "Code Health", description: "Get an AI-powered analysis of your code quality." },
+    { icon: PackageCheck, title: "Dependency Analysis", description: "Check for outdated or unused packages." },
 ];
 
 
-const FeatureList = ({ features, title, icon: TitleIcon }: { features: typeof assistantFeatures, title: string, icon: React.ElementType }) => (
+const FeatureList = ({ features, title, icon: TitleIcon }: { features: (typeof assistantFeatures) | (typeof analysisFeatures), title: string, icon: React.ElementType }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><TitleIcon className="h-5 w-5 text-primary" /> {title}</CardTitle>
@@ -80,6 +83,14 @@ const FeatureList = ({ features, title, icon: TitleIcon }: { features: typeof as
     </Card>
 );
 
+type OverviewStats = {
+  commitCount: number;
+  branchCount: number;
+  issueCount: number;
+  fileCount: number;
+  readmeContent: string | null;
+}
+
 export default function Home() {
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState('');
@@ -88,12 +99,13 @@ export default function Home() {
   
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
-  const [isFetchingBranches, setIsFetchingBranches] = useState(false);
   
   const [currentView, setCurrentView] = useState<View>('url-input');
   
   const [theme, setTheme] = useState<string | undefined>(undefined);
   const [accentColor, setAccentColor] = useState(THEME_COLORS[0].value);
+  
+  const [overviewStats, setOverviewStats] = useState<OverviewStats | null>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -118,14 +130,6 @@ export default function Home() {
     document.documentElement.style.setProperty('--ring', accentColor);
     localStorage.setItem('accentColor', accentColor);
   }, [accentColor]);
-
-  useEffect(() => {
-    if (validatedRepoUrl) {
-       setCurrentView('category-selection');
-    } else {
-        setCurrentView('url-input');
-    }
-  }, [validatedRepoUrl]);
   
   const handleReset = () => {
     setValidatedRepoUrl(null);
@@ -133,8 +137,8 @@ export default function Home() {
     setBranches([]);
     setRepoUrlError(null);
     setIsUrlValidating(false);
-    setIsFetchingBranches(false);
     setCurrentView('url-input');
+    setOverviewStats(null);
   }
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,6 +147,7 @@ export default function Home() {
         setValidatedRepoUrl(null);
         setBranches([]);
         setRepoUrlError(null);
+        setOverviewStats(null);
     }
   };
   
@@ -150,46 +155,34 @@ export default function Home() {
     setValidatedRepoUrl(null);
     setRepoUrlError(null);
     setBranches([]);
+    setOverviewStats(null);
 
     if (!repoUrl) {
       setRepoUrlError('Repository URL is required.');
       return;
     }
-     try {
-        new URL(repoUrl);
-        if (!repoUrl.includes('github.com')) throw new Error();
-    } catch {
-        setRepoUrlError('Please enter a valid GitHub URL.');
-        return;
-    }
 
     setIsUrlValidating(true);
     
     try {
-      const validateResponse = await fetch('/api/validate-repo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const validateResult = await validateResponse.json();
-      if (!validateResponse.ok) {
-        throw new Error(validateResult.error);
-      }
-      setRepoUrlError(null);
+      // The API now handles all validation and fetching in one go.
+      const result = await getRepoOverview(repoUrl);
       
-      setIsFetchingBranches(true);
-      const branchesResponse = await fetch('/api/fetch-branches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const branchesResult = await branchesResponse.json();
-      if (branchesResult.error || !branchesResponse.ok) {
-        throw new Error(branchesResult.error || 'Failed to fetch branches');
+      if (result.error) {
+        throw new Error(result.error);
       }
-
-      setBranches(branchesResult.branches);
+      
+      setRepoUrlError(null);
+      setBranches(result.branches || []);
+      setOverviewStats({
+          commitCount: result.commitCount || 0,
+          branchCount: result.branchCount || 0,
+          issueCount: result.issueCount || 0,
+          fileCount: result.fileCount || 0,
+          readmeContent: result.readmeContent || null
+      });
       setValidatedRepoUrl(repoUrl);
+      setCurrentView('overview');
       
     } catch (e: any) {
       const error = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -197,65 +190,100 @@ export default function Home() {
       toast({ variant: 'destructive', title: 'Validation Failed', description: error });
     } finally {
       setIsUrlValidating(false);
-      setIsFetchingBranches(false);
     }
   }
   
-  const renderCategorySelection = () => (
-      <div className="w-full max-w-4xl mx-auto space-y-8">
-        <div className="text-center">
-            <h2 className="text-2xl font-bold">What would you like to do?</h2>
-            <p className="text-muted-foreground">Choose a category to get started.</p>
+  const renderOverview = () => {
+    if (!overviewStats) {
+      return (
+        <div className="w-full max-w-4xl mx-auto flex items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
+      );
+    }
+
+    const StatCard = ({ title, value, icon: Icon }: { title: string, value: number, icon: React.ElementType }) => (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{value}</div>
+            </CardContent>
+        </Card>
+    );
+
+    return (
+        <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in-50">
+            <div className="text-center">
+                <h2 className="text-3xl font-bold">Repository Overview</h2>
+                <p className="text-muted-foreground font-mono text-sm">{validatedRepoUrl}</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <StatCard title="Total Commits" value={overviewStats.commitCount} icon={GitCommitVertical} />
+                <StatCard title="Branches" value={overviewStats.branchCount} icon={GitBranch} />
+                <StatCard title="Open Issues" value={overviewStats.issueCount} icon={MessageCircleWarning} />
+                <StatCard title="Total Files" value={overviewStats.fileCount} icon={FileCode2} />
+            </div>
+
+            <Card>
                 <CardHeader>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                            <Cpu className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <CardTitle>Assistants</CardTitle>
-                            <CardDescription>AI tools to generate content and help with your tasks.</CardDescription>
-                        </div>
-                    </div>
+                    <CardTitle>What would you like to do next?</CardTitle>
+                    <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Button className="w-full" onClick={() => setCurrentView('assistants')}>
-                        Go to Assistants
-                    </Button>
+                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
+                        <CardHeader>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                    <Cpu className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <CardTitle>Assistants</CardTitle>
+                                    <CardDescription>AI tools to generate content and help with your tasks.</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button className="w-full" onClick={() => setCurrentView('assistants')}>
+                                Go to Assistants
+                            </Button>
+                        </CardContent>
+                    </Card>
+                     <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
+                        <CardHeader>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                    <LineChart className="h-6 w-6" />
+                                </div>
+                                 <div>
+                                    <CardTitle>Analysis & Visualization</CardTitle>
+                                    <CardDescription>Explore your repository with graphs and stats.</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button className="w-full" onClick={() => setCurrentView('analysis')}>
+                                Explore
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </CardContent>
             </Card>
-             <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
-                <CardHeader>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                            <LineChart className="h-6 w-6" />
-                        </div>
-                         <div>
-                            <CardTitle>Analysis & Visualization</CardTitle>
-                            <CardDescription>Explore your repository with graphs and stats.</CardDescription>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <Button className="w-full" onClick={() => setCurrentView('analysis')}>
-                        Explore
-                    </Button>
-                </CardContent>
-            </Card>
         </div>
-      </div>
-  );
+    );
+};
 
   const renderContent = () => {
     switch (currentView) {
         case 'analysis':
              return (
                 <div className="w-full max-w-7xl mx-auto">
-                    <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
+                    <Button variant="ghost" onClick={() => setCurrentView('overview')} className="mb-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to categories
+                        Back to Overview
                     </Button>
                     <AnalysisView repoUrl={validatedRepoUrl!} branches={branches} />
                 </div>
@@ -263,15 +291,15 @@ export default function Home() {
         case 'assistants':
             return (
                 <div className="w-full max-w-7xl mx-auto">
-                    <Button variant="ghost" onClick={() => setCurrentView('category-selection')} className="mb-4">
+                    <Button variant="ghost" onClick={() => setCurrentView('overview')} className="mb-4">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to categories
+                        Back to Overview
                     </Button>
                     <AssistantView repoUrl={validatedRepoUrl!} branches={branches} />
                 </div>
             );
-        case 'category-selection':
-            return renderCategorySelection();
+        case 'overview':
+            return renderOverview();
         case 'url-input':
         default:
             return (
@@ -299,8 +327,8 @@ export default function Home() {
                                             onKeyDown={(e) => e.key === 'Enter' && handleValidateAndFetch()}
                                             className="flex-grow"
                                         />
-                                        <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating || isFetchingBranches}>
-                                            {(isUrlValidating || isFetchingBranches) ? (
+                                        <Button onClick={handleValidateAndFetch} className="w-full sm:w-auto" disabled={isUrlValidating}>
+                                            {isUrlValidating ? (
                                                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Working...</>
                                             ) : (
                                                 <><Search className="mr-2 h-4 w-4" />Continue</>

@@ -1,3 +1,4 @@
+
 'use server';
 
 import { generateDocumentation, type GenerateDocumentationInput } from '@/ai/flows/generate-documentation';
@@ -9,6 +10,8 @@ import { suggestCommitMessage } from '@/ai/flows/suggest-commit-message';
 import { analyzeIssues, type AnalyzeIssuesInput, type AnalyzeIssuesOutput } from '@/ai/flows/analyze-issues-flow';
 import { translateCode, type TranslateCodeInput } from '@/ai/flows/translate-code-flow';
 import { generateComments, type GenerateCommentsInput } from '@/ai/flows/generate-comments-flow';
+import { analyzeCodeHealth, type AnalyzeCodeHealthInput } from '@/ai/flows/code-health-flow';
+import { analyzeDependencies, type AnalyzeDependenciesInput } from '@/ai/flows/dependency-analyzer-flow';
 
 import { 
   getRepoBranches, 
@@ -21,7 +24,8 @@ import {
   getRepoContributors,
   streamRepoFileCommits,
   getRepoIssues,
-  getRepoBranchesWithDetails
+  getRepoBranchesWithDetails,
+  countRepoCommits,
 } from '@/services/github';
 import { z } from 'zod';
 
@@ -114,6 +118,51 @@ const feedbackSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address.' }).optional().or(z.literal('')),
 });
 
+
+export async function getRepoOverview(repoUrl: string): Promise<{
+  branches?: string[];
+  commitCount?: number;
+  branchCount?: number;
+  issueCount?: number;
+  fileCount?: number;
+  readmeContent?: string | null;
+  error?: string;
+}> {
+  const validatedUrl = z.string().url().safeParse(repoUrl);
+  if (!validatedUrl.success) {
+    return { error: 'Invalid repository URL.' };
+  }
+
+  try {
+    // Validate repository existence first
+    await validateRepoService(repoUrl);
+    
+    // Fetch all data in parallel
+    const [branches, commitCount, issues, tree, readmeContent] = await Promise.all([
+      getRepoBranches(repoUrl),
+      countRepoCommits(repoUrl),
+      getRepoIssues(repoUrl).catch(() => []), // Ignore errors for issues if disabled
+      getRepoTreeService(repoUrl, 'main').catch(() => []), // Use main as a default, ignore if fails
+      getRepoFileContent(repoUrl, 'main', 'README.md').catch(() => null) // Use main, ignore if no README
+    ]);
+
+    if (branches.length === 0) {
+      return { error: 'No branches found for this repository. It might be empty.' };
+    }
+
+    return {
+      branches,
+      commitCount,
+      branchCount: branches.length,
+      issueCount: issues.length,
+      fileCount: tree.length,
+      readmeContent,
+    };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred while fetching repository data.';
+    return { error };
+  }
+}
 
 export async function getRepoTree(
   input: z.infer<typeof fetchTreeSchema>
@@ -513,6 +562,26 @@ export async function getBranchActivityAction(input: z.infer<typeof analysisSche
     }
 }
 
+export async function analyzeCodeHealthAction(input: AnalyzeCodeHealthInput) {
+  try {
+    const result = await analyzeCodeHealth(input);
+    return { result };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : 'An unknown error occurred during code health analysis.';
+    return { error };
+  }
+}
+
+export async function analyzeDependenciesAction(input: AnalyzeDependenciesInput) {
+    try {
+        const result = await analyzeDependencies(input);
+        return { result };
+    } catch (e) {
+        const error = e instanceof Error ? e.message : 'An unknown error occurred during dependency analysis.';
+        return { error };
+    }
+}
+
 
 export async function sendFeedbackAction(
   input: z.infer<typeof feedbackSchema>
@@ -581,5 +650,3 @@ export async function sendFeedbackAction(
     return { success: false, error: 'Failed to send feedback.' };
   }
 }
-
-    

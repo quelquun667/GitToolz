@@ -18,14 +18,13 @@ import {
   getRepoCommitsByDate, 
   getRepoFileContent, 
   getRepoTree as getRepoTreeService, 
-  validateRepo as validateRepoService, 
+  getRepoDetails, 
   getRepoDiff, 
   getCommitHistory,
   getRepoContributors,
   streamRepoFileCommits,
   getRepoIssues,
   getRepoBranchesWithDetails,
-  countRepoCommits,
 } from '@/services/github';
 import { z } from 'zod';
 
@@ -121,11 +120,13 @@ const feedbackSchema = z.object({
 
 export async function getRepoOverview(repoUrl: string): Promise<{
   branches?: string[];
-  commitCount?: number;
-  branchCount?: number;
-  issueCount?: number;
+  stars?: number;
+  watchers?: number;
+  openIssues?: number;
+  closedIssues?: number;
   fileCount?: number;
   readmeContent?: string | null;
+  defaultBranch?: string;
   error?: string;
 }> {
   const validatedUrl = z.string().url().safeParse(repoUrl);
@@ -134,29 +135,33 @@ export async function getRepoOverview(repoUrl: string): Promise<{
   }
 
   try {
-    // Validate repository existence first
-    await validateRepoService(repoUrl);
+    const repoDetails = await getRepoDetails(repoUrl);
+    const defaultBranch = repoDetails.default_branch;
     
     // Fetch all data in parallel
-    const [branches, commitCount, issues, tree, readmeContent] = await Promise.all([
+    const [branches, issues, tree, readmeContent] = await Promise.all([
       getRepoBranches(repoUrl),
-      countRepoCommits(repoUrl),
-      getRepoIssues(repoUrl).catch(() => []), // Ignore errors for issues if disabled
-      getRepoTreeService(repoUrl, 'main').catch(() => []), // Use main as a default, ignore if fails
-      getRepoFileContent(repoUrl, 'main', 'README.md').catch(() => null) // Use main, ignore if no README
+      getRepoIssues(repoUrl, 'all').catch(() => []), 
+      getRepoTreeService(repoUrl, defaultBranch).catch(() => []),
+      getRepoFileContent(repoUrl, defaultBranch, 'README.md').catch(() => null)
     ]);
-
+    
     if (branches.length === 0) {
       return { error: 'No branches found for this repository. It might be empty.' };
     }
 
+    const openIssues = issues.filter(i => i.state === 'open').length;
+    const closedIssues = issues.filter(i => i.state === 'closed').length;
+
     return {
       branches,
-      commitCount,
-      branchCount: branches.length,
-      issueCount: issues.length,
+      stars: repoDetails.stargazers_count,
+      watchers: repoDetails.watchers_count,
+      openIssues,
+      closedIssues,
       fileCount: tree.length,
       readmeContent,
+      defaultBranch,
     };
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred while fetching repository data.';
@@ -182,15 +187,15 @@ export async function getRepoTree(
 }
 
 export async function validateRepo(
-  input: z.infer<typeof validateRepoSchema>
+  repoUrl: string
 ): Promise<{ error?: string }> {
-  const validatedFields = validateRepoSchema.safeParse(input);
-  if (!validatedFields.success) {
-    return { error: 'Invalid input.' };
+  const validatedUrl = z.string().url().safeParse(repoUrl);
+  if (!validatedUrl.success) {
+    return { error: 'Invalid repository URL.' };
   }
 
   try {
-    await validateRepoService(validatedFields.data.repoUrl);
+    await getRepoDetails(repoUrl);
     return {};
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred.';
@@ -527,7 +532,7 @@ export async function analyzeIssuesAction(input: z.infer<typeof analysisSchema>)
     const validatedFields = analysisSchema.safeParse(input);
     if (!validatedFields.success) return { error: 'Invalid input.' };
     try {
-        const issues = await getRepoIssues(validatedFields.data.repoUrl);
+        const issues = await getRepoIssues(validatedFields.data.repoUrl, 'all');
         // If there are no issues, return a specific structure immediately without calling the AI.
         if (issues.length === 0) {
             return { totalOpen: 0, totalClosed: 0, categorizedIssues: [], keyThemes: [] };

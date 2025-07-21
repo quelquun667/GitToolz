@@ -50,12 +50,13 @@ function handleApiError(error: any, context?: string): never {
     throw new Error(`Failed to fetch from GitHub. Context: ${context}`);
 }
 
-export async function validateRepo(repoUrl: string): Promise<void> {
+export async function getRepoDetails(repoUrl: string): Promise<any> {
   const { owner, repo } = parseRepoUrl(repoUrl);
   try {
-    await octokit.rest.repos.get({ owner, repo });
+    const { data } = await octokit.rest.repos.get({ owner, repo });
+    return data;
   } catch (error: any) {
-    handleApiError(error, 'validateRepo');
+    handleApiError(error, 'getRepoDetails');
   }
 }
 
@@ -224,38 +225,6 @@ export async function getCommitHistory(
 
 
 // Analysis Services
-
-export async function countRepoCommits(repoUrl: string): Promise<number> {
-    const { owner, repo } = parseRepoUrl(repoUrl);
-    try {
-        // This is a bit of a hack, but it's the most efficient way to get a commit count.
-        // We fetch the commit list with per_page=1, and the Link header will contain the page number of the last page.
-        const response = await octokit.rest.repos.listCommits({
-            owner,
-            repo,
-            per_page: 1,
-        });
-
-        const linkHeader = response.headers.link;
-        if (!linkHeader) {
-            // If there's no Link header, it means there's only one page of commits.
-            return response.data.length;
-        }
-
-        const lastPageMatch = linkHeader.match(/<.*?&page=(\d+)>; rel="last"/);
-        if (lastPageMatch) {
-            return parseInt(lastPageMatch[1], 10);
-        }
-
-        // Fallback for single-page repos
-        return response.data.length;
-
-    } catch (e: any) {
-        handleApiError(e, 'countRepoCommits');
-    }
-}
-
-
 export async function getRepoContributors(repoUrl: string): Promise<any[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
@@ -325,19 +294,19 @@ export async function* streamRepoFileCommits(repoUrl: string, branch: string): A
     }
 }
 
-export async function getRepoIssues(repoUrl: string): Promise<any[]> {
+export async function getRepoIssues(repoUrl: string, state: 'open' | 'closed' | 'all' = 'open'): Promise<any[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
         const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
             owner,
             repo,
-            state: 'open', // Only fetch open issues for the count
+            state: state,
             per_page: 100,
         });
         // Filter out pull requests
         return issues.filter(issue => !issue.pull_request);
     } catch (e: any) {
-        if (e.status === 404) {
+        if (e.status === 404 || e.status === 410) { // 410 Gone if issues are disabled
              throw new Error('Failed to fetch issues. The repository may have issues disabled or be private.');
         }
         handleApiError(e, 'getRepoIssues');

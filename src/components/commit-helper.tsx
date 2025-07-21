@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, GitBranch, CheckCircle2, Clipboard, GitCompareArrows, GitCommitHorizontal, AlertCircle, Copy, Check, RefreshCw } from 'lucide-react';
+import { Loader2, Sparkles, GitBranch, CheckCircle2, Clipboard, GitCompareArrows, GitCommitHorizontal, AlertCircle, Copy, Check, RefreshCw, BookOpenCheck, ExternalLink } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { cn } from '@/lib/utils';
 import CommitSelector from './commit-selector';
 import { Input } from './ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 type CommitHelperProps = {
   repoUrl: string;
@@ -286,6 +287,34 @@ export default function CommitHelper({ repoUrl, branches }: CommitHelperProps) {
             </RadioGroup>
           </CardContent>
         </Card>
+
+        <Accordion type="single" collapsible>
+          <AccordionItem value="item-1">
+            <AccordionTrigger>
+                <div className="flex items-center gap-2 text-sm">
+                    <BookOpenCheck className="h-4 w-4"/>
+                    What are Conventional Commits?
+                </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4 pt-2">
+               <p className="text-xs text-muted-foreground">
+                It's a specification for adding human and machine-readable meaning to commit messages. It provides a set of rules for creating an explicit commit history.
+              </p>
+              <ul className="space-y-2 text-xs">
+                <li><span className="font-mono font-semibold text-primary">feat:</span> A new feature for the user.</li>
+                <li><span className="font-mono font-semibold text-primary">fix:</span> A bug fix for the user.</li>
+                <li><span className="font-mono font-semibold text-primary">docs:</span> Changes to documentation.</li>
+                <li><span className="font-mono font-semibold text-primary">chore:</span> Routine tasks, config changes.</li>
+                <li><span className="font-mono font-semibold text-primary">refactor:</span> A code change that neither fixes a bug nor adds a feature.</li>
+              </ul>
+              <Button asChild variant="link" size="sm" className="p-0 h-auto">
+                <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary" target="_blank" rel="noopener noreferrer">
+                  Read the full documentation <ExternalLink className="ml-1 h-3 w-3" />
+                </a>
+              </Button>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
 
         <div className="data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-top-4" data-state={compareMode === 'branches' ? 'open' : 'closed'}>
             {compareMode === 'branches' && (

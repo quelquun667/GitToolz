@@ -25,6 +25,8 @@ import {
   streamRepoFileCommits,
   getRepoIssues,
   getRepoBranchesWithDetails,
+  getRepoLanguages,
+  getRepoEvents,
 } from '@/services/github';
 import { z } from 'zod';
 
@@ -127,6 +129,10 @@ export async function getRepoOverview(repoUrl: string): Promise<{
   fileCount?: number;
   readmeContent?: string | null;
   defaultBranch?: string;
+  repoSize?: number;
+  topContributors?: any[];
+  languages?: Record<string, number>;
+  recentActivity?: any[];
   error?: string;
 }> {
   const validatedUrl = z.string().url().safeParse(repoUrl);
@@ -139,11 +145,13 @@ export async function getRepoOverview(repoUrl: string): Promise<{
     const defaultBranch = repoDetails.default_branch;
     
     // Fetch all data in parallel
-    const [branches, issues, tree, readmeContent] = await Promise.all([
+    const [branches, issues, tree, languages, contributors, events] = await Promise.all([
       getRepoBranches(repoUrl),
       getRepoIssues(repoUrl, 'all').catch(() => []), 
       getRepoTreeService(repoUrl, defaultBranch).catch(() => []),
-      getRepoFileContent(repoUrl, defaultBranch, 'README.md').catch(() => null)
+      getRepoLanguages(repoUrl).catch(() => ({})),
+      getRepoContributors(repoUrl, 3).catch(() => []),
+      getRepoEvents(repoUrl).catch(() => []),
     ]);
     
     if (branches.length === 0) {
@@ -160,11 +168,15 @@ export async function getRepoOverview(repoUrl: string): Promise<{
       openIssues,
       closedIssues,
       fileCount: tree.length,
-      readmeContent,
       defaultBranch,
+      repoSize: repoDetails.size,
+      languages,
+      topContributors: contributors,
+      recentActivity: events.slice(0, 5), // Limit to 5 recent events
     };
   } catch (e) {
     const error = e instanceof Error ? e.message : 'An unknown error occurred while fetching repository data.';
+    console.error(error);
     return { error };
   }
 }

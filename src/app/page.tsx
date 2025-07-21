@@ -86,14 +86,17 @@ const FeatureList = ({ features, title, icon: TitleIcon }: { features: (typeof a
 );
 
 export type OverviewStats = {
-  branches: string[];
-  stars: number;
-  watchers: number;
-  openIssues: number;
-  closedIssues: number;
-  fileCount: number;
-  readmeContent: string | null;
-  defaultBranch: string;
+  branches?: string[];
+  stars?: number;
+  watchers?: number;
+  openIssues?: number;
+  closedIssues?: number;
+  fileCount?: number;
+  repoSize?: number;
+  topContributors?: any[];
+  languages?: Record<string, number>;
+  recentActivity?: any[];
+  defaultBranch?: string;
 }
 
 export default function Home() {
@@ -179,16 +182,7 @@ export default function Home() {
       }
       
       setRepoUrlError(null);
-      setOverviewStats({
-          branches: result.branches || [],
-          stars: result.stars || 0,
-          watchers: result.watchers || 0,
-          openIssues: result.openIssues || 0,
-          closedIssues: result.closedIssues || 0,
-          fileCount: result.fileCount || 0,
-          readmeContent: result.readmeContent || null,
-          defaultBranch: result.defaultBranch || 'main'
-      });
+      setOverviewStats(result);
       setValidatedRepoUrl(repoUrl);
       setCurrentView('overview');
       

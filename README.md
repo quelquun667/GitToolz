@@ -8,7 +8,7 @@ Git Toolz is an IDE-like environment designed to enhance your development workfl
 
 ## How to Use Git Toolz
 
-Simply visit the [Git Toolz website](https://git-toolz.vercel.app/) in your web browser. Enter the public GitHub repository URL in the designated area and validate to start using the powerful tools and features.
+Simply visit the [Git Toolz website](https://git-toolz.vercel.app/) in your web browser. Enter the **public** GitHub repository URL in the designated area and validate to start using the powerful tools and features. Support for private repositories is coming soon!
 
 ## Features 🚀
 
@@ -26,6 +26,10 @@ Simply visit the [Git Toolz website](https://git-toolz.vercel.app/) in your web 
 *   **Commit Graph:** Visualize your commit history. 📊
 *   **File Explorer:** Easily navigate and manage your project files. 📁
 *   **Terminal Access:** Run terminal commands directly within the environment. 💻
+*   **Dependency Analyzer:** Analyze project dependencies.
+*   **Onboarding Guide Generator:** Generate onboarding guides for new contributors.
+*   **Regression Detective:** Help identify potential regressions.
+*   **Release Notes Generator:** Generate release notes.
 
 ## License
 

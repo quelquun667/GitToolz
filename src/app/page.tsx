@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import AssistantView from '@/components/assistant-view';
 import AnalysisView from '@/components/analysis-view';
+import OverviewDashboard from '@/components/overview-dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
@@ -28,11 +29,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
-import { getRepoOverview } from '@/app/actions';
+import { getRepoOverview, validateRepo } from '@/app/actions';
 
 type View = 'url-input' | 'overview' | 'assistants' | 'analysis';
 
@@ -83,19 +83,21 @@ const FeatureList = ({ features, title, icon: TitleIcon }: { features: (typeof a
     </Card>
 );
 
-type OverviewStats = {
-  commitCount: number;
-  branchCount: number;
-  issueCount: number;
+export type OverviewStats = {
+  branches: string[];
+  stars: number;
+  watchers: number;
+  openIssues: number;
+  closedIssues: number;
   fileCount: number;
   readmeContent: string | null;
+  defaultBranch: string;
 }
 
 export default function Home() {
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState('');
   const [validatedRepoUrl, setValidatedRepoUrl] = useState<string | null>(null);
-  const [branches, setBranches] = useState<string[]>([]);
   
   const [repoUrlError, setRepoUrlError] = useState<string | null>(null);
   const [isUrlValidating, setIsUrlValidating] = useState(false);
@@ -134,7 +136,6 @@ export default function Home() {
   const handleReset = () => {
     setValidatedRepoUrl(null);
     setRepoUrl('');
-    setBranches([]);
     setRepoUrlError(null);
     setIsUrlValidating(false);
     setCurrentView('url-input');
@@ -145,7 +146,6 @@ export default function Home() {
     setRepoUrl(e.target.value);
     if(validatedRepoUrl) {
         setValidatedRepoUrl(null);
-        setBranches([]);
         setRepoUrlError(null);
         setOverviewStats(null);
     }
@@ -154,7 +154,6 @@ export default function Home() {
   const handleValidateAndFetch = async () => {
     setValidatedRepoUrl(null);
     setRepoUrlError(null);
-    setBranches([]);
     setOverviewStats(null);
 
     if (!repoUrl) {
@@ -166,20 +165,27 @@ export default function Home() {
     
     try {
       // The API now handles all validation and fetching in one go.
-      const result = await getRepoOverview(repoUrl);
+      const response = await fetch('/api/validate-repo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repoUrl }),
+      });
+      const result = await response.json();
       
-      if (result.error) {
-        throw new Error(result.error);
+      if (!response.ok || result.error) {
+        throw new Error(result.error || 'Failed to fetch repository data.');
       }
       
       setRepoUrlError(null);
-      setBranches(result.branches || []);
       setOverviewStats({
-          commitCount: result.commitCount || 0,
-          branchCount: result.branchCount || 0,
-          issueCount: result.issueCount || 0,
+          branches: result.branches || [],
+          stars: result.stars || 0,
+          watchers: result.watchers || 0,
+          openIssues: result.openIssues || 0,
+          closedIssues: result.closedIssues || 0,
           fileCount: result.fileCount || 0,
-          readmeContent: result.readmeContent || null
+          readmeContent: result.readmeContent || null,
+          defaultBranch: result.defaultBranch || 'main'
       });
       setValidatedRepoUrl(repoUrl);
       setCurrentView('overview');
@@ -192,89 +198,6 @@ export default function Home() {
       setIsUrlValidating(false);
     }
   }
-  
-  const renderOverview = () => {
-    if (!overviewStats) {
-      return (
-        <div className="w-full max-w-4xl mx-auto flex items-center justify-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        </div>
-      );
-    }
-
-    const StatCard = ({ title, value, icon: Icon }: { title: string, value: number, icon: React.ElementType }) => (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-            </CardContent>
-        </Card>
-    );
-
-    return (
-        <div className="w-full max-w-6xl mx-auto space-y-8 animate-in fade-in-50">
-            <div className="text-center">
-                <h2 className="text-3xl font-bold">Repository Overview</h2>
-                <p className="text-muted-foreground font-mono text-sm">{validatedRepoUrl}</p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Total Commits" value={overviewStats.commitCount} icon={GitCommitVertical} />
-                <StatCard title="Branches" value={overviewStats.branchCount} icon={GitBranch} />
-                <StatCard title="Open Issues" value={overviewStats.issueCount} icon={MessageCircleWarning} />
-                <StatCard title="Total Files" value={overviewStats.fileCount} icon={FileCode2} />
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>What would you like to do next?</CardTitle>
-                    <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
-                </CardHeader>
-                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                    <Cpu className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <CardTitle>Assistants</CardTitle>
-                                    <CardDescription>AI tools to generate content and help with your tasks.</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Button className="w-full" onClick={() => setCurrentView('assistants')}>
-                                Go to Assistants
-                            </Button>
-                        </CardContent>
-                    </Card>
-                     <Card className="hover:border-primary/50 hover:shadow-xl transition-all duration-300">
-                        <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                    <LineChart className="h-6 w-6" />
-                                </div>
-                                 <div>
-                                    <CardTitle>Analysis & Visualization</CardTitle>
-                                    <CardDescription>Explore your repository with graphs and stats.</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Button className="w-full" onClick={() => setCurrentView('analysis')}>
-                                Explore
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </CardContent>
-            </Card>
-        </div>
-    );
-};
 
   const renderContent = () => {
     switch (currentView) {
@@ -285,7 +208,7 @@ export default function Home() {
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Overview
                     </Button>
-                    <AnalysisView repoUrl={validatedRepoUrl!} branches={branches} />
+                    <AnalysisView repoUrl={validatedRepoUrl!} branches={overviewStats?.branches || []} />
                 </div>
             );
         case 'assistants':
@@ -295,11 +218,17 @@ export default function Home() {
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Overview
                     </Button>
-                    <AssistantView repoUrl={validatedRepoUrl!} branches={branches} />
+                    <AssistantView repoUrl={validatedRepoUrl!} branches={overviewStats?.branches || []} />
                 </div>
             );
         case 'overview':
-            return renderOverview();
+            return (
+                <OverviewDashboard 
+                    stats={overviewStats}
+                    repoUrl={validatedRepoUrl!}
+                    onNavigate={(view) => setCurrentView(view)}
+                />
+            );
         case 'url-input':
         default:
             return (

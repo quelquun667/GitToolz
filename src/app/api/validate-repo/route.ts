@@ -1,4 +1,5 @@
-import { validateRepo } from '@/app/actions';
+
+import { getRepoOverview } from '@/app/actions';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await validateRepo({ repoUrl });
+    const result = await getRepoOverview(repoUrl);
 
     if (result.error) {
       return new NextResponse(JSON.stringify({ error: result.error }), {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(result);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

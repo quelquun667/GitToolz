@@ -1,3 +1,4 @@
+
 import { Octokit } from '@octokit/rest';
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -224,6 +225,37 @@ export async function getCommitHistory(
 
 // Analysis Services
 
+export async function countRepoCommits(repoUrl: string): Promise<number> {
+    const { owner, repo } = parseRepoUrl(repoUrl);
+    try {
+        // This is a bit of a hack, but it's the most efficient way to get a commit count.
+        // We fetch the commit list with per_page=1, and the Link header will contain the page number of the last page.
+        const response = await octokit.rest.repos.listCommits({
+            owner,
+            repo,
+            per_page: 1,
+        });
+
+        const linkHeader = response.headers.link;
+        if (!linkHeader) {
+            // If there's no Link header, it means there's only one page of commits.
+            return response.data.length;
+        }
+
+        const lastPageMatch = linkHeader.match(/<.*?&page=(\d+)>; rel="last"/);
+        if (lastPageMatch) {
+            return parseInt(lastPageMatch[1], 10);
+        }
+
+        // Fallback for single-page repos
+        return response.data.length;
+
+    } catch (e: any) {
+        handleApiError(e, 'countRepoCommits');
+    }
+}
+
+
 export async function getRepoContributors(repoUrl: string): Promise<any[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
     try {
@@ -299,7 +331,7 @@ export async function getRepoIssues(repoUrl: string): Promise<any[]> {
         const issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
             owner,
             repo,
-            state: 'all', // Fetch both open and closed issues
+            state: 'open', // Only fetch open issues for the count
             per_page: 100,
         });
         // Filter out pull requests
@@ -352,5 +384,3 @@ export async function getRepoBranchesWithDetails(repoUrl: string, defaultBranch:
         handleApiError(e, 'getRepoBranchesWithDetails');
     }
 }
-
-    

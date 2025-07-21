@@ -289,7 +289,15 @@ export default function Home() {
   };
   
   if (theme === undefined) {
-    return null;
+    return (
+        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <GitBranch className="h-12 w-12 text-primary animate-pulse" />
+                <h1 className="text-2xl font-bold">GitToolz</h1>
+                <p className="text-muted-foreground">Loading application...</p>
+            </div>
+        </div>
+    );
   }
 
   return (

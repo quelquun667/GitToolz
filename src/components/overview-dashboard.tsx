@@ -45,7 +45,7 @@ const IssueChart = ({ openIssues, closedIssues }: { openIssues: number; closedIs
   const total = openIssues + closedIssues;
 
   return (
-    <Card className="h-full">
+    <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
         <CardTitle>Issue Distribution</CardTitle>
         <CardDescription>A breakdown of open and closed issues.</CardDescription>
@@ -94,56 +94,59 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
         <p className="text-muted-foreground font-mono text-sm">{repoUrl}</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Stars" value={stars} icon={Star} />
-        <StatCard title="Watchers" value={watchers} icon={Eye} />
-        <StatCard title="Branches" value={branches.length} icon={GitBranch} />
-        <StatCard title="Total Files" value={fileCount} icon={FileCode2} />
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard title="Stars" value={stars} icon={Star} />
+            <StatCard title="Watchers" value={watchers} icon={Eye} />
+            <StatCard title="Branches" value={branches.length} icon={GitBranch} />
+            <StatCard title="Total Files" value={fileCount} icon={FileCode2} />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <IssueChart openIssues={openIssues} closedIssues={closedIssues} />
+            {/* You can add more chart widgets here in the future */}
+        </div>
+      </div>
+      
+      <div>
+        <Card className="h-full">
+            <CardHeader>
+                <CardTitle>What would you like to do next?</CardTitle>
+                <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
+                    <CardHeader>
+                        <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
+                            <Cpu className="h-6 w-6" />
+                        </div>
+                        <CardTitle className="text-xl">AI Assistants</CardTitle>
+                        <CardDescription>Generate content and get help with your development tasks.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="mt-auto">
+                        <Button className="w-full" onClick={() => onNavigate('assistants')}>
+                            Go to Assistants <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
+                    <CardHeader>
+                         <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
+                            <LineChart className="h-6 w-6" />
+                        </div>
+                        <CardTitle className="text-xl">Analysis &amp; Visualization</CardTitle>
+                        <CardDescription>Explore your repository with interactive graphs and stats.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="mt-auto">
+                        <Button className="w-full" onClick={() => onNavigate('analysis')}>
+                            Explore Repository <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    </CardContent>
+                </Card>
+            </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-1">
-          <IssueChart openIssues={openIssues} closedIssues={closedIssues} />
-        </div>
-        <div className="lg:col-span-2">
-            <Card className="h-full">
-                <CardHeader>
-                    <CardTitle>What would you like to do next?</CardTitle>
-                    <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
-                        <CardHeader>
-                            <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
-                                <Cpu className="h-6 w-6" />
-                            </div>
-                            <CardTitle className="text-xl">AI Assistants</CardTitle>
-                            <CardDescription>Generate content and get help with your development tasks.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="mt-auto">
-                            <Button className="w-full" onClick={() => onNavigate('assistants')}>
-                                Go to Assistants <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                        </CardContent>
-                    </Card>
-                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
-                        <CardHeader>
-                             <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary mb-4 border border-primary/20">
-                                <LineChart className="h-6 w-6" />
-                            </div>
-                            <CardTitle className="text-xl">Analysis &amp; Visualization</CardTitle>
-                            <CardDescription>Explore your repository with interactive graphs and stats.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="mt-auto">
-                            <Button className="w-full" onClick={() => onNavigate('analysis')}>
-                                Explore Repository <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </CardContent>
-            </Card>
-        </div>
-      </div>
     </div>
   );
 }

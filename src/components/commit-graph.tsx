@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, GitBranch, Search, AlertCircle, GitCommitVertical, Expand } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import CommitSelector from './commit-selector';
 
 type CommitNode = {
   sha: string;
@@ -33,24 +33,18 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
   const networkInstanceRef = useRef<Network | null>(null);
   const modalNetworkInstanceRef = useRef<Network | null>(null);
   
-  const [branch, setBranch] = useState('');
+  const [baseCommit, setBaseCommit] = useState('');
+  const [headCommit, setHeadCommit] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [graphData, setGraphData] = useState<CommitNode[] | null>(null);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
-
-  useEffect(() => {
-    if (branches.length > 0) {
-      const defaultBranch = branches.includes('main') ? 'main' : branches.includes('master') ? 'master' : branches[0];
-      setBranch(defaultBranch);
-    }
-  }, [branches]);
   
 
   const handleFetchAndDrawGraph = async () => {
-    if (!branch) {
-        toast({ variant: 'destructive', title: 'Please select a branch to start from.' });
+    if (!baseCommit || !headCommit) {
+        toast({ variant: 'destructive', title: 'Please select a start and end commit.' });
         return;
     }
     
@@ -64,7 +58,8 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           repoUrl, 
-          branch,
+          base: baseCommit,
+          head: headCommit,
         }),
       });
       const result = await response.json();
@@ -202,7 +197,7 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     }
   }, [isGraphModalOpen, graphData, drawGraph]);
   
-  const isFetchDisabled = isLoading || !branch;
+  const isFetchDisabled = isLoading || !baseCommit || !headCommit;
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-120px)] bg-card text-foreground">
@@ -210,15 +205,26 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Commit Graph</CardTitle>
-            <CardDescription>Visualize the commit history and branch structure of your repository.</CardDescription>
+            <CardDescription>Select two commits to visualize the history between them.</CardDescription>
           </CardHeader>
            <CardContent className="space-y-4">
                  <div className="space-y-2">
-                    <Label>Start from Branch</Label>
-                    <Select onValueChange={setBranch} value={branch} disabled={branches.length === 0}>
-                      <SelectTrigger><SelectValue placeholder="Select a branch" /></SelectTrigger>
-                      <SelectContent>{branches.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Label>Start Commit</Label>
+                    <CommitSelector 
+                        repoUrl={repoUrl} 
+                        branches={branches}
+                        onCommitSelect={setBaseCommit}
+                        instanceId="base"
+                    />
+                 </div>
+                 <div className="space-y-2">
+                    <Label>End Commit</Label>
+                     <CommitSelector 
+                        repoUrl={repoUrl} 
+                        branches={branches}
+                        onCommitSelect={setHeadCommit}
+                        instanceId="head"
+                    />
                  </div>
             </CardContent>
         </Card>
@@ -276,3 +282,5 @@ export default function CommitGraph({ repoUrl, branches }: CommitGraphProps) {
     </div>
   );
 }
+
+    

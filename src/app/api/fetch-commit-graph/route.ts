@@ -3,16 +3,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { repoUrl, branch } = await request.json();
+    const { repoUrl, base, head } = await request.json();
 
-    if (!repoUrl || !branch) {
+    if (!repoUrl || !base || !head) {
       return new NextResponse(JSON.stringify({ error: 'Missing required parameters' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const result = await fetchCommitGraphAction({ repoUrl, branch });
+    const result = await fetchCommitGraphAction({ repoUrl, base, head });
 
     if (result.error) {
         return new NextResponse(JSON.stringify({ error: result.error }), {
@@ -32,3 +32,5 @@ export async function POST(request: Request) {
     });
   }
 }
+
+    

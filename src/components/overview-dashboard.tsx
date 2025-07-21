@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Star, Eye, MessageCircleWarning, FileCode2, GitBranch, Cpu, LineChart } from 'lucide-react';
+import { Star, Eye, MessageCircleWarning, FileCode2, GitBranch, Cpu, LineChart, ArrowRight } from 'lucide-react';
 import type { OverviewStats } from '@/app/page';
 
 type OverviewDashboardProps = {
@@ -112,39 +112,31 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
                     <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
                         <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                    <Cpu className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-xl">AI Assistants</CardTitle>
-                                    <CardDescription>Generate content and help with your tasks.</CardDescription>
-                                </div>
+                            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
+                                <Cpu className="h-7 w-7" />
                             </div>
+                            <CardTitle className="text-xl">AI Assistants</CardTitle>
+                            <CardDescription>Generate content and get help with your development tasks.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="mt-auto">
                             <Button className="w-full" onClick={() => onNavigate('assistants')}>
-                                Go to Assistants
+                                Go to Assistants <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </CardContent>
                     </Card>
-                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300 flex flex-col">
                         <CardHeader>
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                    <LineChart className="h-6 w-6" />
-                                </div>
-                                    <div>
-                                    <CardTitle className="text-xl">Analysis & Visualization</CardTitle>
-                                    <CardDescription>Explore your repository with graphs and stats.</CardDescription>
-                                </div>
+                             <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
+                                <LineChart className="h-7 w-7" />
                             </div>
+                            <CardTitle className="text-xl">Analysis & Visualization</CardTitle>
+                            <CardDescription>Explore your repository with interactive graphs and stats.</CardDescription>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="mt-auto">
                             <Button className="w-full" onClick={() => onNavigate('analysis')}>
-                                Explore
+                                Explore Repository <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         </CardContent>
                     </Card>

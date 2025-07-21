@@ -186,29 +186,38 @@ export async function getRepoDiff(repoUrl: string, base: string, head: string): 
 
 export async function getCommitHistory(
     repoUrl: string,
-    branch: string
+    base: string,
+    head: string
 ): Promise<{ sha: string; message: string; author: string | null; parents: string[] }[]> {
     const { owner, repo } = parseRepoUrl(repoUrl);
 
     try {
-        const allCommits = await octokit.paginate(octokit.rest.repos.listCommits, {
+        const { data } = await octokit.rest.repos.compareCommitsWithBasehead({
             owner,
             repo,
-            sha: branch,
-            per_page: 100,
+            basehead: `${base}...${head}`
         });
-
-        const commitsToReturn = allCommits.map(commit => ({
+        
+        const commitsToReturn = data.commits.map(commit => ({
             sha: commit.sha,
             message: commit.commit.message,
             author: commit.author?.login ?? 'Unknown',
             parents: commit.parents.map(p => p.sha),
         }));
+
+        // The head commit itself is included in the comparison, so we need to fetch it separately to get its parents
+        const headCommitResponse = await octokit.rest.repos.getCommit({ owner, repo, ref: head });
+        commitsToReturn.push({
+            sha: headCommitResponse.data.sha,
+            message: headCommitResponse.data.commit.message,
+            author: headCommitResponse.data.author?.login ?? 'Unknown',
+            parents: headCommitResponse.data.parents.map(p => p.sha),
+        });
         
-        return commitsToReturn.slice(0, 100);
+        return commitsToReturn;
 
     } catch (error: any) {
-        handleApiError(error, `getCommitHistory on branch "${branch}"`);
+        handleApiError(error, `getCommitHistory between ${base} and ${head}`);
     }
 }
 
@@ -343,3 +352,5 @@ export async function getRepoBranchesWithDetails(repoUrl: string, defaultBranch:
         handleApiError(e, 'getRepoBranchesWithDetails');
     }
 }
+
+    

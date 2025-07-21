@@ -2,16 +2,11 @@
 'use client';
 
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Star, Eye, MessageCircleWarning, FileCode2, GitBranch, Cpu, LineChart, CheckCircle, XCircle } from 'lucide-react';
+import { Star, Eye, MessageCircleWarning, FileCode2, GitBranch, Cpu, LineChart } from 'lucide-react';
 import type { OverviewStats } from '@/app/page';
-import { cn } from '@/lib/utils';
 
 type OverviewDashboardProps = {
   stats: OverviewStats | null;
@@ -90,21 +85,7 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
     return null;
   }
 
-  const { stars, watchers, openIssues, closedIssues, readmeContent, fileCount, branches } = stats;
-
-  const extractRepoPath = (url: string) => {
-    try {
-        const path = new URL(url).pathname.split('/').filter(p => p);
-        return `${path[0]}/${path[1]}`;
-    } catch {
-        return 'user/repo';
-    }
-  }
-  const repoPath = extractRepoPath(repoUrl);
-
-  const getRawImageUrl = (branch: string, imageFilePath: string) => {
-    return `https://raw.githubusercontent.com/${repoPath}/${branch}/${imageFilePath}`;
-  };
+  const { stars, watchers, openIssues, closedIssues, fileCount, branches } = stats;
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-6 animate-in fade-in-50">
@@ -124,81 +105,53 @@ export default function OverviewDashboard({ stats, repoUrl, onNavigate }: Overvi
         <div className="lg:col-span-1">
           <IssueChart openIssues={openIssues} closedIssues={closedIssues} />
         </div>
-        <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>README.md</CardTitle>
-                <CardDescription>An overview of the project from its README file.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ScrollArea className="h-48 pr-4">
-                    {readmeContent ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                                 img: ({node, src, ...props}) => {
-                                    if (!src) return <img {...props} alt="" />;
-                                    const isAbsolute = src.startsWith('http');
-                                    const imageUrl = isAbsolute ? src : getRawImageUrl(stats.defaultBranch, src);
-                                    return <Image src={imageUrl} alt={props.alt || ''} width={400} height={200} className="rounded-md" unoptimized />;
-                                  }
-                            }}>
-                                {readmeContent}
-                            </ReactMarkdown>
-                        </div>
-                    ) : (
-                         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                            <FileCode2 className="w-8 h-8" />
-                            <p className="mt-2 text-sm">No README.md found</p>
-                        </div>
-                    )}
-                </ScrollArea>
-            </CardContent>
-        </Card>
-      </div>
-
-       <Card>
-            <CardHeader>
-                <CardTitle>What would you like to do next?</CardTitle>
-                <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
-                    <CardHeader>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                <Cpu className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <CardTitle>AI Assistants</CardTitle>
-                                <CardDescription>Generate content and help with your tasks.</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Button className="w-full" onClick={() => onNavigate('assistants')}>
-                            Go to Assistants
-                        </Button>
-                    </CardContent>
-                </Card>
-                <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
-                    <CardHeader>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
-                                <LineChart className="h-6 w-6" />
-                            </div>
+        <div className="lg:col-span-2">
+            <Card className="h-full">
+                <CardHeader>
+                    <CardTitle>What would you like to do next?</CardTitle>
+                    <CardDescription>Choose a category of tools to explore this repository further.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                        <CardHeader>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                    <Cpu className="h-6 w-6" />
+                                </div>
                                 <div>
-                                <CardTitle>Analysis & Visualization</CardTitle>
-                                <CardDescription>Explore your repository with graphs and stats.</CardDescription>
+                                    <CardTitle className="text-xl">AI Assistants</CardTitle>
+                                    <CardDescription>Generate content and help with your tasks.</CardDescription>
+                                </div>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Button className="w-full" onClick={() => onNavigate('analysis')}>
-                            Explore
-                        </Button>
-                    </CardContent>
-                </Card>
-            </CardContent>
-        </Card>
+                        </CardHeader>
+                        <CardContent>
+                            <Button className="w-full" onClick={() => onNavigate('assistants')}>
+                                Go to Assistants
+                            </Button>
+                        </CardContent>
+                    </Card>
+                    <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-300">
+                        <CardHeader>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-primary/10 text-primary">
+                                    <LineChart className="h-6 w-6" />
+                                </div>
+                                    <div>
+                                    <CardTitle className="text-xl">Analysis & Visualization</CardTitle>
+                                    <CardDescription>Explore your repository with graphs and stats.</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <Button className="w-full" onClick={() => onNavigate('analysis')}>
+                                Explore
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </CardContent>
+            </Card>
+        </div>
+      </div>
     </div>
   );
 }

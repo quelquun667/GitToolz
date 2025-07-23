@@ -143,7 +143,7 @@ export default function IssueAnalyzer({ repoUrl, branches }: IssueAnalyzerProps)
                                                 borderRadius: 'var(--radius)'
                                             }}
                                         />
-                                        <Bar dataKey="count" name="Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                                        <Bar dataKey="count" name="Issues" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} animationDuration={800}>
                                           <LabelList dataKey="count" position="top" offset={8} className="fill-foreground font-semibold" />
                                         </Bar>
                                     </BarChart>

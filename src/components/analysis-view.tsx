@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveTabs } from '@/components/responsive-tabs';
-import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck, Fingerprint } from 'lucide-react';
+import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck, Fingerprint, GitCompareArrows, PackageSearch } from 'lucide-react';
 import CommitGraph from '@/components/commit-graph';
 import ContributorDashboard from './contributor-dashboard';
 import CodeHotspots from './code-hotspots';
@@ -12,6 +12,8 @@ import BranchActivity from './branch-activity';
 import CodeHealthAnalyzer from './code-health-analyzer';
 import DependencyAnalyzer from './dependency-analyzer';
 import RegressionDetective from './regression-detective';
+import AdvancedBranchComparator from './advanced-branch-comparator';
+import GhostDependencyAnalyzer from './ghost-dependency-analyzer';
 
 type AnalysisViewProps = {
   repoUrl: string;
@@ -45,6 +47,11 @@ const analysisTabs = [
     icon: GitMerge,
   },
   {
+    value: "branch-comparison",
+    label: "Branch Comparator",
+    icon: GitCompareArrows,
+  },
+  {
     value: "health",
     label: "Code Health",
     icon: ShieldCheck,
@@ -53,6 +60,11 @@ const analysisTabs = [
     value: "dependencies",
     label: "Dependencies",
     icon: PackageCheck,
+  },
+  {
+    value: "ghost-dependencies",
+    label: "Ghost Dependencies",
+    icon: PackageSearch,
   },
   {
     value: "regression",
@@ -81,11 +93,17 @@ export default function AnalysisView({ repoUrl, branches }: AnalysisViewProps) {
              <ResponsiveTabs.Content value="branches">
               <BranchActivity repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
+             <ResponsiveTabs.Content value="branch-comparison">
+              <AdvancedBranchComparator repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
              <ResponsiveTabs.Content value="health">
               <CodeHealthAnalyzer repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="dependencies">
               <DependencyAnalyzer repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+             <ResponsiveTabs.Content value="ghost-dependencies">
+              <GhostDependencyAnalyzer repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
             <ResponsiveTabs.Content value="regression">
               <RegressionDetective repoUrl={repoUrl} branches={branches} />

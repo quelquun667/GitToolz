@@ -60,7 +60,7 @@ export default function LanguageDistributionChart({ languages }: LanguageDistrib
           <div className="h-48 relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50} paddingAngle={2}>
+                <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50} paddingAngle={2} animationDuration={800}>
                   {data.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} />
                   ))}

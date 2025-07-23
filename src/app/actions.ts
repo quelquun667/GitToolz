@@ -15,6 +15,9 @@ import { analyzeCodeHealth, type AnalyzeCodeHealthInput } from '@/ai/flows/code-
 import { analyzeDependencies, type AnalyzeDependenciesInput } from '@/ai/flows/dependency-analyzer-flow';
 import { generateOnboardingGuide, type GenerateOnboardingGuideInput } from '@/ai/flows/generate-onboarding-guide-flow';
 import { findRegression, type FindRegressionInput } from '@/ai/flows/find-regression-flow';
+import { compareBranchesAdvanced, type CompareBranchesAdvancedInput } from '@/ai/flows/advanced-branch-comparison-flow';
+import { analyzeGhostDependencies, type GhostDependencyInput } from '@/ai/flows/ghost-dependency-analyzer-flow';
+
 
 import { 
   getRepoBranches, 
@@ -669,6 +672,34 @@ export async function streamRegressionDetectiveAction(
     },
   });
   return stream;
+}
+
+export async function streamAdvancedBranchComparison(input: CompareBranchesAdvancedInput): Promise<ReadableStream> {
+    const comparisonStream = compareBranchesAdvanced(input);
+    const stream = new ReadableStream({
+        async start(controller) {
+            const encoder = new TextEncoder();
+            for await (const chunk of comparisonStream) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            }
+            controller.close();
+        },
+    });
+    return stream;
+}
+
+export async function streamGhostDependencyAnalysis(input: GhostDependencyInput): Promise<ReadableStream> {
+    const analysisStream = analyzeGhostDependencies(input);
+    const stream = new ReadableStream({
+        async start(controller) {
+            const encoder = new TextEncoder();
+            for await (const chunk of analysisStream) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            }
+            controller.close();
+        },
+    });
+    return stream;
 }
 
 

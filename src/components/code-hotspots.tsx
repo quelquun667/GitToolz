@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -169,7 +170,7 @@ export default function CodeHotspots({ repoUrl, branches }: CodeHotspotsProps) {
                                 }}
                                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                             />
-                            <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                            <Bar dataKey="commitCount" name="Commits" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} animationDuration={800}>
                                <LabelList dataKey="commitCount" position="right" offset={10} className="fill-foreground font-semibold" />
                             </Bar>
                         </BarChart>

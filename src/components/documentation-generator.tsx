@@ -438,7 +438,10 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
       return (
         <div className="flex-1 flex items-center justify-center rounded-lg border-2 border-dashed border-border/60">
           <div className="text-center p-4 max-w-md mx-auto">
-            <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
+            <div className="relative mx-auto h-12 w-12 text-primary">
+                <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-20"></div>
+                <FileText className="relative mx-auto h-12 w-12" />
+            </div>
             <h3 className="mt-4 text-lg font-medium">Generating...</h3>
             <Card className="mt-4 text-left bg-muted/50">
               <CardContent className="p-4">
@@ -447,7 +450,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
                   <ScrollArea className="h-32 w-full">
                     <div className="flex-1 space-y-1 text-sm text-muted-foreground">
                       {generationLog.map((log, index) => (
-                        <p key={index} className="animate-in fade-in slide-in-from-bottom-2 duration-500" dangerouslySetInnerHTML={{ __html: log }} />
+                        <p key={index} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500" dangerouslySetInnerHTML={{ __html: log }} />
                       ))}
                     </div>
                   </ScrollArea>

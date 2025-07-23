@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck, ShieldAlert, UserPlus, Fingerprint, Annoyed } from 'lucide-react';
+import { FileCode2, History, GitBranch, Globe, Loader2, Search, TestTube2, MessageSquarePlus, LineChart, Cpu, ArrowLeft, RotateCcw, GitCommitVertical, Users, Flame, MessageCircleWarning, Settings, Moon, Sun, Github, Languages, MessageSquareQuote, GitMerge, ShieldCheck, HelpCircle, PackageCheck, ShieldAlert, UserPlus, Fingerprint, Annoyed, GitCompareArrows, PackageSearch } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -64,8 +64,10 @@ const analysisFeatures = [
     { icon: Flame, title: "Code Hotspots", description: "Identify the most frequently changed files." },
     { icon: MessageCircleWarning, title: "Issue Analysis", description: "Get an AI-powered summary of project issues." },
     { icon: GitMerge, title: "Branch Activity", description: "View the status of all repository branches." },
+    { icon: GitCompareArrows, title: "Branch Comparator", description: "Get a high-level summary of the differences between branches." },
     { icon: ShieldCheck, title: "Code Health", description: "Get an AI-powered analysis of your code quality." },
-    { icon: PackageCheck, title: "Dependency Analysis", description: "Check for outdated or unused packages." },
+    { icon: PackageCheck, title: "Dependency Analysis", description: "Check for outdated packages." },
+    { icon: PackageSearch, title: "Ghost Dependencies", description: "Find unused packages in your codebase." },
     { icon: Fingerprint, title: "Regression Detective", description: "Find commits that may have introduced a bug." },
 ];
 

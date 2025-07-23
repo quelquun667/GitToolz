@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Search, AlertCircle, Fingerprint, GitBranch, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { Loader2, Search, AlertCircle, Fingerprint, GitBranch, Calendar as CalendarIcon, CheckCircle2, Terminal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { ScrollArea } from './ui/scroll-area';
 
 type Commit = {
   sha: string;
@@ -49,6 +50,7 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<SuspiciousCommit[] | null>(null);
+  const [generationLog, setGenerationLog] = useState<string[]>([]);
 
   useEffect(() => {
     if (branches.length > 0) {
@@ -106,6 +108,7 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
     setIsLoading(true);
     setError(null);
     setAnalysis(null);
+    setGenerationLog([]);
 
     try {
       const response = await fetch('/api/find-regression', {
@@ -123,6 +126,7 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
         for (const line of lines) {
           const data = JSON.parse(line.substring(6));
           if (data.error) throw new Error(data.error);
+          if (data.status) setGenerationLog(prev => [...prev, data.status]);
           if (data.suspiciousCommits) setAnalysis(data.suspiciousCommits);
         }
       }
@@ -140,9 +144,24 @@ export default function RegressionDetective({ repoUrl, branches }: RegressionDet
   const renderMainContent = () => {
     if (isLoading) {
       return (
-        <div className="text-center">
-          <Loader2 className="mx-auto h-12 w-12 text-primary animate-spin" />
-          <p className="mt-4 text-muted-foreground">AI is analyzing commits...</p>
+        <div className="text-center p-4 max-w-md mx-auto">
+            <div className="relative mx-auto h-12 w-12 text-primary">
+                <div className="absolute inset-0 bg-primary rounded-full animate-pulse opacity-20"></div>
+                <Fingerprint className="relative mx-auto h-12 w-12" />
+            </div>
+            <h3 className="mt-4 text-lg font-medium">AI is analyzing commits...</h3>
+            <Card className="mt-4 text-left bg-muted/50">
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-3">
+                  <Terminal className="h-5 w-5 text-muted-foreground mt-1"/>
+                  <ScrollArea className="h-32 w-full">
+                    <div className="flex-1 space-y-1 text-sm text-muted-foreground">
+                      {generationLog.map((log, index) => <p key={index} className="animate-in fade-in-0 slide-in-from-bottom-2 duration-500">{log}</p>)}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </CardContent>
+            </Card>
         </div>
       );
     }

@@ -35,6 +35,7 @@ import { Switch } from '@/components/ui/switch';
 import FeedbackButton from '@/components/feedback-button';
 import { getRepoOverview, validateRepo } from '@/app/actions';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import LoadingSkeleton from '@/components/loading-skeleton';
 
 type View = 'url-input' | 'overview' | 'assistants' | 'analysis';
 
@@ -48,13 +49,13 @@ const THEME_COLORS = [
 
 const assistantFeatures = [
     { icon: FileCode2, title: "Generate Documentation", description: "Create a complete README.md from your code." },
+    { icon: UserPlus, title: "Onboarding Assistant", description: "Generate a getting-started guide for new developers." },
     { icon: History, title: "Create Changelogs", description: "Generate structured changelogs from commits." },
     { icon: Annoyed, title: "Write Release Notes", description: "Create user-friendly release announcements." },
     { icon: TestTube2, title: "Generate Test Cases", description: "Instantly create unit tests for your functions." },
     { icon: MessageSquarePlus, title: "Suggest Commit Messages", description: "Get conventional commit suggestions for your diffs." },
     { icon: Languages, title: "Translate Code", description: "Convert code snippets between programming languages." },
     { icon: MessageSquareQuote, title: "Generate Comments", description: "Add documentation comments to your functions." },
-    { icon: UserPlus, title: "Onboarding Assistant", description: "Generate a getting-started guide for new developers." },
 ];
 
 const analysisFeatures = [
@@ -69,7 +70,7 @@ const analysisFeatures = [
 ];
 
 
-const FeatureList = ({ features, title, icon: TitleIcon }: { features: (typeof assistantFeatures) | (typeof analysisFeatures), title: string, icon: React.ElementType }) => (
+const FeatureList = ({ features, title, icon: TitleIcon }: { features: {icon: React.ElementType, title: string, description: string}[], title: string, icon: React.ElementType }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2"><TitleIcon className="h-5 w-5 text-primary" /> {title}</CardTitle>
@@ -286,15 +287,7 @@ export default function Home() {
   };
   
   if (theme === undefined) {
-    return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
-            <div className="flex flex-col items-center gap-4">
-                <GitBranch className="h-12 w-12 text-primary animate-pulse" />
-                <h1 className="text-2xl font-bold">GitToolz</h1>
-                <p className="text-muted-foreground">Loading application...</p>
-            </div>
-        </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (

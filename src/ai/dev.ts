@@ -18,4 +18,5 @@ import '@/ai/flows/generate-onboarding-guide-flow.ts';
 import '@/ai/flows/find-regression-flow.ts';
 import '@/ai/flows/advanced-branch-comparison-flow.ts';
 import '@/ai/flows/ghost-dependency-analyzer-flow.ts';
+import '@/ai/flows/repository-risk-analyzer-flow.ts';
 

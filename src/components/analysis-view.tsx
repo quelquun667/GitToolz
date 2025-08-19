@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveTabs } from '@/components/responsive-tabs';
-import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck, Fingerprint, GitCompareArrows, PackageSearch } from 'lucide-react';
+import { GitCommitVertical, Users, Flame, MessageCircleWarning, GitMerge, ShieldCheck, PackageCheck, Fingerprint, GitCompareArrows, PackageSearch, ShieldAlert } from 'lucide-react';
 import CommitGraph from '@/components/commit-graph';
 import ContributorDashboard from './contributor-dashboard';
 import CodeHotspots from './code-hotspots';
@@ -14,6 +14,7 @@ import DependencyAnalyzer from './dependency-analyzer';
 import RegressionDetective from './regression-detective';
 import AdvancedBranchComparator from './advanced-branch-comparator';
 import GhostDependencyAnalyzer from './ghost-dependency-analyzer';
+import RepositoryRiskAnalyzer from './repository-risk-analyzer';
 
 type AnalysisViewProps = {
   repoUrl: string;
@@ -50,6 +51,11 @@ const analysisTabs = [
     value: "branch-comparison",
     label: "Branch Comparator",
     icon: GitCompareArrows,
+  },
+  {
+    value: "risk-analysis",
+    label: "Risk Analysis",
+    icon: ShieldAlert,
   },
   {
     value: "health",
@@ -95,6 +101,9 @@ export default function AnalysisView({ repoUrl, branches }: AnalysisViewProps) {
             </ResponsiveTabs.Content>
              <ResponsiveTabs.Content value="branch-comparison">
               <AdvancedBranchComparator repoUrl={repoUrl} branches={branches} />
+            </ResponsiveTabs.Content>
+            <ResponsiveTabs.Content value="risk-analysis">
+              <RepositoryRiskAnalyzer repoUrl={repoUrl} branches={branches} />
             </ResponsiveTabs.Content>
              <ResponsiveTabs.Content value="health">
               <CodeHealthAnalyzer repoUrl={repoUrl} branches={branches} />

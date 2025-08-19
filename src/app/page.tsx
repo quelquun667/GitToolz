@@ -65,6 +65,7 @@ const analysisFeatures = [
     { icon: MessageCircleWarning, title: "Issue Analysis", description: "Get an AI-powered summary of project issues." },
     { icon: GitMerge, title: "Branch Activity", description: "View the status of all repository branches." },
     { icon: GitCompareArrows, title: "Branch Comparator", description: "Get a high-level summary of the differences between branches." },
+    { icon: ShieldAlert, title: "Repository Risk Analysis", description: "Assess potential security risks in a repository." },
     { icon: ShieldCheck, title: "Code Health", description: "Get an AI-powered analysis of your code quality." },
     { icon: PackageCheck, title: "Dependency Analysis", description: "Check for outdated packages." },
     { icon: PackageSearch, title: "Ghost Dependencies", description: "Find unused packages in your codebase." },

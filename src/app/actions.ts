@@ -17,6 +17,7 @@ import { generateOnboardingGuide, type GenerateOnboardingGuideInput } from '@/ai
 import { findRegression, type FindRegressionInput } from '@/ai/flows/find-regression-flow';
 import { compareBranchesAdvanced, type CompareBranchesAdvancedInput } from '@/ai/flows/advanced-branch-comparison-flow';
 import { analyzeGhostDependencies, type GhostDependencyInput } from '@/ai/flows/ghost-dependency-analyzer-flow';
+import { analyzeRepositoryRisk, type AnalyzeRepositoryRiskInput } from '@/ai/flows/repository-risk-analyzer-flow';
 
 
 import { 
@@ -690,6 +691,20 @@ export async function streamAdvancedBranchComparison(input: CompareBranchesAdvan
 
 export async function streamGhostDependencyAnalysis(input: GhostDependencyInput): Promise<ReadableStream> {
     const analysisStream = analyzeGhostDependencies(input);
+    const stream = new ReadableStream({
+        async start(controller) {
+            const encoder = new TextEncoder();
+            for await (const chunk of analysisStream) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            }
+            controller.close();
+        },
+    });
+    return stream;
+}
+
+export async function streamRepositoryRiskAnalysis(input: AnalyzeRepositoryRiskInput): Promise<ReadableStream> {
+    const analysisStream = analyzeRepositoryRisk(input);
     const stream = new ReadableStream({
         async start(controller) {
             const encoder = new TextEncoder();

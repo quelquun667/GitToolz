@@ -341,6 +341,7 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
     setEditedDocumentation(null);
     setSummary(null);
     setGenerationLog([]);
+    let finalDocumentation = '';
 
     try {
       const response = await fetch('/api/generate', {
@@ -371,43 +372,44 @@ export default function DocumentationGenerator({ repoUrl, branches }: Documentat
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
+      
+      while(true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      const processStream = async () => {
-        while(true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n\n');
-          
-          for (let i = 0; i < lines.length - 1; i++) {
-            const line = lines[i];
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6);
-              try {
-                const parsed = JSON.parse(data);
-                if (parsed.status) {
-                    setGenerationLog(prev => [...prev, parsed.status]);
-                }
-                if (parsed.documentation) {
-                    setDocumentation(parsed.documentation);
-                    const { summary } = await summarizeAction(parsed.documentation);
-                    setSummary(summary);
-                }
-                if (parsed.error) {
-                    throw new Error(parsed.error);
-                }
-              } catch (e) {
-                console.error("Failed to parse stream data chunk:", data, e);
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.status) {
+                  setGenerationLog(prev => [...prev, parsed.status]);
               }
+              if (parsed.documentation) {
+                  finalDocumentation = parsed.documentation;
+              }
+              if (parsed.error) {
+                  throw new Error(parsed.error);
+              }
+            } catch (e) {
+              console.error("Failed to parse stream data chunk:", data, e);
             }
           }
-          buffer = lines[lines.length - 1];
         }
-      };
+      }
       
-      await processStream();
+      if (finalDocumentation) {
+        setDocumentation(finalDocumentation);
+        setEditedDocumentation(finalDocumentation);
+        const { summary } = await summarizeAction(finalDocumentation);
+        setSummary(summary);
+      } else {
+        throw new Error("AI did not return any documentation content.");
+      }
+      
       setIsGenerating(false);
       setIsFinalizing(true);
       setTimeout(() => {
